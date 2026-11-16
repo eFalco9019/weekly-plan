@@ -5,13 +5,14 @@ import { profiles } from './data/profiles'
 import { ProfileSelector } from './components/ProfileSelector'
 import { DayPlanner } from './components/DayPlanner'
 import { WeekView } from './components/WeekView'
+import { ShoppingList } from './components/ShoppingList'
 import { shiftWeek, toIso } from './lib/dateUtils'
 
 function today(): string {
   return toIso(new Date())
 }
 
-type View = { mode: 'week' } | { mode: 'day'; date: string }
+type View = { mode: 'week' } | { mode: 'day'; date: string } | { mode: 'shopping' }
 
 function App() {
   const [profile, setProfile] = useState<ProfileId | null>(null)
@@ -36,6 +37,10 @@ function App() {
     )
   }
 
+  if (view.mode === 'shopping') {
+    return <ShoppingList anchorDate={anchorDate} onBack={() => setView({ mode: 'week' })} />
+  }
+
   return (
     <WeekView
       profile={profile}
@@ -43,6 +48,7 @@ function App() {
       onNavigateWeek={(deltaWeeks) => setAnchorDate((d) => shiftWeek(d, deltaWeeks))}
       onSelectDay={(date) => setView({ mode: 'day', date })}
       onChangeProfile={() => setProfile(null)}
+      onOpenShoppingList={() => setView({ mode: 'shopping' })}
     />
   )
 }

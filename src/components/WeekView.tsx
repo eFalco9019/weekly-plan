@@ -10,11 +10,19 @@ interface Props {
   onNavigateWeek: (deltaWeeks: number) => void
   onSelectDay: (date: string) => void
   onChangeProfile: () => void
+  onOpenShoppingList: () => void
 }
 
 const weekdayLabels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
 
-export function WeekView({ profile, anchorDate, onNavigateWeek, onSelectDay, onChangeProfile }: Props) {
+export function WeekView({
+  profile,
+  anchorDate,
+  onNavigateWeek,
+  onSelectDay,
+  onChangeProfile,
+  onOpenShoppingList,
+}: Props) {
   const dates = weekDates(anchorDate)
   const todayIso = toIso(new Date())
 
@@ -35,6 +43,9 @@ export function WeekView({ profile, anchorDate, onNavigateWeek, onSelectDay, onC
             ›
           </button>
         </div>
+        <button className="week-view__shopping" onClick={onOpenShoppingList}>
+          🛒 Lista della spesa
+        </button>
       </header>
 
       <div className="week-view__grid">
