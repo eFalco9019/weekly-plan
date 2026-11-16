@@ -77,3 +77,47 @@ export interface DayMealChoice {
    * ribilanciano gli altri pasti della giornata. */
   bloccato?: boolean
 }
+
+// ---------------------------------------------------------------------
+// Libreria ricette
+// ---------------------------------------------------------------------
+
+/** Un ingrediente di una ricetta, con la grammatura "base" (per le
+ * porzioni indicate in baseServings) e, se nota, la densità di CHO per
+ * 100g — necessaria per poter scalare la ricetta sul target del pasto. */
+export interface RecipeIngredient {
+  nome: string
+  grammiBase: number
+  choPer100g?: number
+  /** true se questo è l'ingrediente "principale" da scalare per
+   * adattare la ricetta al target di CHO del pasto (es. la pasta). Gli
+   * altri ingredienti restano fissi o scalano in proporzione minore. */
+  scalabile?: boolean
+}
+
+export interface Recipe {
+  id: string
+  nome: string
+  /** Pasto consigliato per questa ricetta (una pasta è pensata per il
+   * pranzo, non per la cena, per esempio). */
+  pastoConsigliato: MealType
+  porzioniBase: number
+  ingredienti: RecipeIngredient[]
+  preparazione?: string
+  /** Link al post Instagram/social da cui proviene, se noto. Claude non
+   * può leggere il contenuto del link automaticamente: serve sempre che
+   * l'utente fornisca anche il testo/screenshot della ricetta. */
+  fonteUrl?: string
+  fonteNote?: string
+}
+
+/** Assegnazione di una ricetta della libreria a un pasto di una data
+ * specifica, con le porzioni effettive (da cui si derivano le
+ * grammature scalate). */
+export interface DayRecipeAssignment {
+  profile: ProfileId
+  date: string
+  meal: MealType
+  recipeId: string
+  porzioni: number
+}

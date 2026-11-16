@@ -1,6 +1,8 @@
 import type { MealState } from '../hooks/useDayPlan'
 import type { DayType, MealTemplate, MealType } from '../types'
 import { mealEquivalents } from '../hooks/useDayPlan'
+import { recipes } from '../data/recipes'
+import { recipesForMeal, scaleRecipeToMeal } from '../lib/recipeEngine'
 
 const mealLabels: Record<MealType, string> = {
   colazione: 'Colazione',
@@ -28,6 +30,8 @@ interface Props {
   onSetAlimento: (categoria: string, alimento: string) => void
   onSetCarboGrammi: (grammi: number) => void
   onToggleBlocco: () => void
+  onAssignRecipe: (recipeId: string) => void
+  onClearRecipe: () => void
 }
 
 export function MealSection({
@@ -39,6 +43,8 @@ export function MealSection({
   onSetAlimento,
   onSetCarboGrammi,
   onToggleBlocco,
+  onAssignRecipe,
+  onClearRecipe,
 }: Props) {
   const groups = mealEquivalents(week, meal)
   const targetCho = template
@@ -47,6 +53,14 @@ export function MealSection({
       : template.targetChoOffG
     : undefined
   const carboScelta = mealState.scelte.carboidrati
+  const recipeOptions = recipesForMeal(recipes, meal)
+  const assignedRecipe = carboScelta?.recipeId
+    ? recipes.find((r) => r.id === carboScelta.recipeId)
+    : undefined
+  const scaledIngredients =
+    assignedRecipe && targetCho !== undefined
+      ? scaleRecipeToMeal(assignedRecipe, { targetChoG: targetCho, porzioni: 1 })
+      : []
 
   return (
     <section className="meal-section">
@@ -57,9 +71,60 @@ export function MealSection({
         )}
       </header>
 
+      {recipeOptions.length > 0 && (
+        <div className="meal-section__ricetta">
+          {assignedRecipe ? (
+            <div className="meal-section__ricetta-card">
+              <div className="meal-section__ricetta-header">
+                <strong>🍝 {assignedRecipe.nome}</strong>
+                <button type="button" onClick={onClearRecipe}>
+                  rimuovi ricetta
+                </button>
+              </div>
+              <ul className="meal-section__ricetta-ingredienti">
+                {scaledIngredients.map((ing) => (
+                  <li key={ing.nome}>
+                    {ing.nome}: {ing.grammi} g
+                  </li>
+                ))}
+              </ul>
+              {assignedRecipe.preparazione && (
+                <p className="meal-section__ricetta-prep">{assignedRecipe.preparazione}</p>
+              )}
+              {assignedRecipe.fonteUrl && (
+                <p className="meal-section__ricetta-fonte">
+                  Fonte:{' '}
+                  <a href={assignedRecipe.fonteUrl} target="_blank" rel="noreferrer">
+                    {assignedRecipe.fonteNote ?? assignedRecipe.fonteUrl}
+                  </a>
+                </p>
+              )}
+            </div>
+          ) : (
+            <label className="meal-section__ricetta-picker">
+              Ricetta della libreria
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onAssignRecipe(e.target.value)
+                }}
+              >
+                <option value="">-- scegli una ricetta (opzionale) --</option>
+                {recipeOptions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+
       {Object.entries(groups).map(([categoria, items]) => {
         const scelta = mealState.scelte[categoria]
         if (!scelta) return null
+        if (categoria === 'carboidrati' && assignedRecipe) return null
         return (
           <div className="meal-section__categoria" key={categoria}>
             <label>{categoriaLabels[categoria] ?? categoria}</label>

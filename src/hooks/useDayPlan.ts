@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { DayType, MealType, ProfileId } from '../types'
+import type { DayType, FoodEquivalent, MealType, ProfileId } from '../types'
 import { mealEquivalentsForWeek, templatesForWeek } from '../data/weekRegistry'
-import { rebalanceDay } from '../lib/macroEngine'
+import { recipes } from '../data/recipes'
+import { rebalanceDay, choTargetToGrams } from '../lib/macroEngine'
 
 /**
  * Stato di un pasto per la giornata selezionata: alimento scelto per
  * ogni categoria + grammatura. I dati del piano (alimenti, target) sono
  * week-aware: vedi src/data/weekRegistry.ts (Settimane 1-4).
+ *
+ * `choPer100gOverride` + `recipeId` sono valorizzati quando il
+ * carboidrato del pasto viene da una ricetta della libreria (vedi
+ * assignRecipe) invece che dalla tabella di equivalenza standard.
  */
+export interface MealChoice {
+  alimento: string
+  grammi: number
+  bloccato?: boolean
+  choPer100gOverride?: number
+  recipeId?: string
+}
+
 export interface MealState {
-  // categoria -> { alimento, grammi, bloccato? }
-  scelte: Record<string, { alimento: string; grammi: number; bloccato?: boolean }>
+  scelte: Record<string, MealChoice>
 }
 
 export type DayState = Record<MealType, MealState>
@@ -24,6 +36,16 @@ function storageKey(profile: ProfileId, date: string) {
 /** Alimenti disponibili per un pasto, nella settimana indicata. */
 export function mealEquivalents(week: number, meal: MealType) {
   return mealEquivalentsForWeek(week, meal)
+}
+
+/** Densità di CHO per 100g della scelta carboidrati corrente di un pasto:
+ * usa l'override (ricetta) se presente, altrimenti cerca nella tabella
+ * di equivalenza standard. */
+export function carboDensity(week: number, meal: MealType, scelta: MealChoice | undefined): number {
+  if (!scelta) return 0
+  if (scelta.choPer100gOverride) return scelta.choPer100gOverride
+  const found = mealEquivalents(week, meal).carboidrati?.find((e) => e.alimento === scelta.alimento)
+  return found?.choPer100g ?? 0
 }
 
 function defaultMealState(week: number, meal: MealType, dayType: DayType): MealState {
@@ -120,24 +142,25 @@ export function useDayPlan(profile: ProfileId, date: string) {
     }))
   }
 
-  /**
-   * Modifica manualmente la grammatura del carboidrato di un pasto e
-   * ribilancia gli altri pasti (non bloccati) della giornata per
-   * mantenere il totale di CHO giornaliero.
-   */
-  function setCarboGrammi(meal: MealType, grammi: number) {
+  function buildEngineMeals(overrides: Partial<Record<MealType, number>>) {
     const mealsForEngine: Parameters<typeof rebalanceDay>[0]['meals'] = []
-
     for (const m of ['colazione', 'pranzo', 'cena'] as MealType[]) {
       const template = templates.find((t) => t.meal === m)
-      if (!template) continue
       const scelta = state[m].scelte.carboidrati
-      if (!scelta) continue
-      const equivalents = mealEquivalents(week, m).carboidrati
-      const equivalent = equivalents.find((e) => e.alimento === scelta.alimento)
-      if (!equivalent) continue
+      if (!template || !scelta) continue
+      const density = carboDensity(week, m, scelta)
+      if (density <= 0) continue
 
-      const grammiEffettivi = m === meal ? grammi : scelta.grammi
+      const grammiEffettivi = overrides[m] ?? scelta.grammi
+
+      const equivalent: FoodEquivalent = {
+        meal: m,
+        categoria: 'carboidrati',
+        alimento: scelta.alimento,
+        grammiOn: 0,
+        grammiOff: 0,
+        choPer100g: density,
+      }
 
       mealsForEngine.push({
         meal: m,
@@ -154,9 +177,10 @@ export function useDayPlan(profile: ProfileId, date: string) {
         },
       })
     }
+    return mealsForEngine
+  }
 
-    const results = rebalanceDay({ dayType, meals: mealsForEngine, editedMeal: meal })
-
+  function applyRebalanceResults(results: ReturnType<typeof rebalanceDay>) {
     setState((prev) => {
       const next = { ...prev }
       for (const r of results) {
@@ -174,6 +198,69 @@ export function useDayPlan(profile: ProfileId, date: string) {
     })
   }
 
+  /**
+   * Modifica manualmente la grammatura del carboidrato di un pasto e
+   * ribilancia gli altri pasti (non bloccati) della giornata per
+   * mantenere il totale di CHO giornaliero.
+   */
+  function setCarboGrammi(meal: MealType, grammi: number) {
+    const mealsForEngine = buildEngineMeals({ [meal]: grammi })
+    const results = rebalanceDay({ dayType, meals: mealsForEngine, editedMeal: meal })
+    applyRebalanceResults(results)
+  }
+
+  /**
+   * Assegna una ricetta della libreria al pasto: l'ingrediente
+   * "scalabile" della ricetta (es. la pasta) viene impostato alla
+   * grammatura che centra il target di CHO del pasto, poi gli altri
+   * pasti della giornata si ribilanciano come con una modifica manuale.
+   */
+  function assignRecipe(meal: MealType, recipeId: string) {
+    const recipe = recipes.find((r) => r.id === recipeId)
+    if (!recipe) return
+    const scalabile = recipe.ingredienti.find((i) => i.scalabile && i.choPer100g)
+    if (!scalabile || !scalabile.choPer100g) return
+
+    const template = templates.find((t) => t.meal === meal)
+    if (!template) return
+    const targetCho = dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG
+    const grammi = choTargetToGrams(targetCho, scalabile.choPer100g)
+
+    setState((prev) => ({
+      ...prev,
+      [meal]: {
+        scelte: {
+          ...prev[meal].scelte,
+          carboidrati: {
+            alimento: scalabile.nome,
+            grammi,
+            choPer100gOverride: scalabile.choPer100g,
+            recipeId: recipe.id,
+          },
+        },
+      },
+    }))
+  }
+
+  /** Rimuove la ricetta assegnata e torna alla scelta da tabella standard. */
+  function clearRecipe(meal: MealType) {
+    const items = mealEquivalents(week, meal).carboidrati
+    const first = items?.[0]
+    if (!first) return
+    setState((prev) => ({
+      ...prev,
+      [meal]: {
+        scelte: {
+          ...prev[meal].scelte,
+          carboidrati: {
+            alimento: first.alimento,
+            grammi: dayType === 'ON' ? first.grammiOn : first.grammiOff,
+          },
+        },
+      },
+    }))
+  }
+
   return {
     week,
     setWeek,
@@ -184,5 +271,7 @@ export function useDayPlan(profile: ProfileId, date: string) {
     setAlimento,
     setCarboGrammi,
     toggleBlocco,
+    assignRecipe,
+    clearRecipe,
   }
 }

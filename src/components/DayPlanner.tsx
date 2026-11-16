@@ -64,6 +64,8 @@ export function DayPlanner({ profile, date, onDateChange, onChangeProfile }: Pro
             onSetAlimento={(categoria, alimento) => plan.setAlimento(meal, categoria, alimento)}
             onSetCarboGrammi={(grammi) => plan.setCarboGrammi(meal, grammi)}
             onToggleBlocco={() => plan.toggleBlocco(meal)}
+            onAssignRecipe={(recipeId) => plan.assignRecipe(meal, recipeId)}
+            onClearRecipe={() => plan.clearRecipe(meal)}
           />
         ))}
       </div>

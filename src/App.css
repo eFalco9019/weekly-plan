@@ -188,3 +188,66 @@ body {
   color: #888;
   margin: 8px 0 0;
 }
+
+.meal-section__ricetta {
+  margin-bottom: 12px;
+}
+
+.meal-section__ricetta-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.meal-section__ricetta-picker select {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.meal-section__ricetta-card {
+  background: #fff8ec;
+  border: 1px solid #f0d9a6;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.meal-section__ricetta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.meal-section__ricetta-header button {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+}
+
+.meal-section__ricetta-ingredienti {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+.meal-section__ricetta-prep {
+  font-size: 0.8rem;
+  color: #555;
+  margin: 0 0 6px;
+}
+
+.meal-section__ricetta-fonte {
+  font-size: 0.75rem;
+  color: #888;
+  margin: 0;
+}
+
+.meal-section__ricetta-fonte a {
+  color: #a66b2f;
+}

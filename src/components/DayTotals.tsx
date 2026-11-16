@@ -1,7 +1,6 @@
 import type { DayState } from '../hooks/useDayPlan'
 import type { DayType, MealTemplate, MealType } from '../types'
-import { mealEquivalents } from '../hooks/useDayPlan'
-import { calcMealCho } from '../lib/macroEngine'
+import { carboDensity } from '../hooks/useDayPlan'
 
 interface Props {
   state: DayState
@@ -18,12 +17,9 @@ export function DayTotals({ state, templates, dayType, week }: Props) {
     const template = templates.find((t) => t.meal === meal)
     const scelta = state[meal].scelte.carboidrati
     if (!template || !scelta) continue
-    const equivalent = mealEquivalents(week, meal).carboidrati.find((e) => e.alimento === scelta.alimento)
-    if (!equivalent) continue
-    totalActual += calcMealCho(
-      { profile: 'ezio', date: '', meal, categoria: 'carboidrati', alimento: scelta.alimento, grammi: scelta.grammi },
-      equivalent,
-    )
+    const density = carboDensity(week, meal, scelta)
+    if (density <= 0) continue
+    totalActual += (scelta.grammi * density) / 100
     totalTarget += dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG
   }
 
