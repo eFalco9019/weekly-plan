@@ -19,11 +19,64 @@ export const weeks: Record<number, WeekData> = {
   4: { templates: week4Templates, colazione: week4Colazione, pranzo: week4Pranzo, cena: week4Cena, spuntino: week4Spuntino },
 }
 
-export function mealEquivalentsForWeek(week: number, meal: MealType): Record<string, FoodEquivalent[]> {
-  const data = weeks[week] ?? weeks[1]
-  return data[meal]
+import type { ProfileId } from '../types'
+import { coefficientsFor, dailyFixedMacros, templatesFromCoefficients } from './coefficients'
+
+/**
+ * Le tabelle sopra sono quelle del piano di Arianna (dietista). Per un altro
+ * profilo si ricavano dalla settimana 1:
+ * - fonti di carboidrati: grammi = target del pasto del profilo / densità di
+ *   CHO dell'alimento (la stessa del piano), come già tra le settimane;
+ * - fonti proteiche e spuntini proteici: grammi × (proteine del profilo / 120);
+ * - fonti di grassi e spuntini frutta + grassi: grammi × (grassi del profilo / 48);
+ * - frutta e verdura invariate.
+ */
+const REFERENCE: ProfileId = 'arianna'
+const proteinCategories = new Set(['proteine', 'alternativePome'])
+const fatCategories = new Set(['grassi', 'fruttaGrassi'])
+const cache = new Map<string, Record<string, FoodEquivalent[]>>()
+
+function scaledFactors(profile: ProfileId) {
+  const ref = dailyFixedMacros(coefficientsFor(REFERENCE)!)
+  const own = coefficientsFor(profile)
+  if (!own) return { prot: 1, fat: 1 }
+  const m = dailyFixedMacros(own)
+  return { prot: m.proteine / ref.proteine, fat: m.grassi / ref.grassi }
 }
 
-export function templatesForWeek(week: number): MealTemplate[] {
-  return (weeks[week] ?? weeks[1]).templates
+export function mealEquivalentsForWeek(
+  week: number,
+  meal: MealType,
+  profile: ProfileId = REFERENCE,
+): Record<string, FoodEquivalent[]> {
+  const data = weeks[week] ?? weeks[1]
+  if (profile === REFERENCE || !coefficientsFor(profile)) return data[meal]
+  const key = `${profile}|${week}|${meal}`
+  const hit = cache.get(key)
+  if (hit) return hit
+  const template = templatesForWeek(week, profile).find((t) => t.meal === meal)
+  const { prot, fat } = scaledFactors(profile)
+  const base = weeks[1][meal]
+  const out: Record<string, FoodEquivalent[]> = {}
+  for (const [categoria, items] of Object.entries(base)) {
+    out[categoria] = items.map((it) => {
+      if (categoria === 'carboidrati' && it.choPer100g && template) {
+        return {
+          ...it,
+          grammiOn: Math.round((template.targetChoOnG * 100) / it.choPer100g),
+          grammiOff: Math.round((template.targetChoOffG * 100) / it.choPer100g),
+        }
+      }
+      const f = proteinCategories.has(categoria) ? prot : fatCategories.has(categoria) ? fat : 1
+      return f === 1 ? it : { ...it, grammiOn: Math.round(it.grammiOn * f), grammiOff: Math.round(it.grammiOff * f) }
+    })
+  }
+  cache.set(key, out)
+  return out
+}
+
+export function templatesForWeek(week: number, profile: ProfileId = REFERENCE): MealTemplate[] {
+  if (profile === REFERENCE) return (weeks[week] ?? weeks[1]).templates
+  const c = coefficientsFor(profile) ?? coefficientsFor(REFERENCE)!
+  return templatesFromCoefficients(c, week)
 }

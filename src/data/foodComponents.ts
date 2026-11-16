@@ -28,18 +28,19 @@ const any: Record<string, Composite> = {
   'Gallette + yogurt + marmellata Hero': { ref: 100, componenti: [{ nome: 'Gallette di riso', grammi: 16 }, { nome: 'Yogurt greco 0%', grammi: 100 }, { nome: 'Marmellata Hero Light', grammi: 30 }] },
 }
 
-/** Olio EVO che il piano abbina a una proteina, per pasto (note "grassi: Xg olio EVO"). */
-const olioPerPasto: Partial<Record<MealType, Record<string, number>>> = {
+/** Olio EVO che il piano abbina a una proteina, per pasto (note "grassi: Xg olio EVO"),
+ * alla grammatura di riferimento della proteina: scala con la porzione. */
+const olioPerPasto: Partial<Record<MealType, Record<string, { olio: number; ref: number }>>> = {
   pranzo: {
-    'Tonno al naturale sgocciolato': 14,
-    'Pesce persico o altro pesce magro': 12,
-    'Roast beef magro': 10,
-    'Petto di tacchino': 12,
-    'Petto di pollo': 12,
+    'Tonno al naturale sgocciolato': { olio: 14, ref: 120 },
+    'Pesce persico o altro pesce magro': { olio: 12, ref: 150 },
+    'Roast beef magro': { olio: 10, ref: 130 },
+    'Petto di tacchino': { olio: 12, ref: 135 },
+    'Petto di pollo': { olio: 12, ref: 135 },
   },
   cena: {
-    'Petto di pollo': 10,
-    'Petto di tacchino': 10,
+    'Petto di pollo': { olio: 10, ref: 260 },
+    'Petto di tacchino': { olio: 10, ref: 260 },
   },
 }
 
@@ -50,5 +51,5 @@ export function foodComponents(meal: MealType, alimento: string, grammi: number)
     ? composite.componenti.map((c) => ({ nome: c.nome, grammi: Math.round((c.grammi * grammi) / composite.ref) }))
     : [{ nome: alimento, grammi }]
   const olio = olioPerPasto[meal]?.[alimento]
-  return olio ? [...base, { nome: 'Olio EVO', grammi: olio }] : base
+  return olio ? [...base, { nome: 'Olio EVO', grammi: Math.round((olio.olio * grammi) / olio.ref) }] : base
 }

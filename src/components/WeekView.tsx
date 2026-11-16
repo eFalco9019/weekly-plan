@@ -107,8 +107,8 @@ export function WeekView({
           const saved = loadDayPlan(profile, date)
           const week = saved?.week ?? 1
           const dayType = saved?.dayType ?? 'ON'
-          const state = saved?.state ?? defaultDayState(week, dayType, date)
-          const templates = templatesForWeek(week)
+          const state = saved?.state ?? defaultDayState(profile, week, dayType, date)
+          const templates = templatesForWeek(week, profile)
           const { actual, target } = calcDayChoTotals(week, dayType, state, templates)
           const isToday = date === todayIso
 

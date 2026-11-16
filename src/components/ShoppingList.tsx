@@ -28,8 +28,8 @@ export function ShoppingList({ anchorDate, onBack }: Props) {
         const saved = loadDayPlan(profile.id, date)
         const week = saved?.week ?? 1
         const dayType = saved?.dayType ?? 'ON'
-        const state = saved?.state ?? defaultDayState(week, dayType, date)
-        entries.push({ week, dayType, state, templates: templatesForWeek(week) })
+        const state = saved?.state ?? defaultDayState(profile.id, week, dayType, date)
+        entries.push({ week, dayType, state, templates: templatesForWeek(week, profile.id) })
       }
     }
     return buildShoppingList(entries)

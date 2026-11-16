@@ -52,10 +52,41 @@ export const coefficients: PlanCoefficients[] = [
     quoteProteine: { colazione: 21, pranzo: 25, spuntino: 9, cena: 45 },
     grassiPranzoG: 15,
   },
+  {
+    // STIMA PROVVISORIA (16/11/2026), in attesa dei coefficienti veri di Ezio.
+    // Dati: maschio, 36 anni, 85-90 kg (usati 87,5), 198 cm; basket 2 volte,
+    // nuoto 1250 m 2 volte, palestra 40' 1-2 volte a settimana.
+    // - proteine 1,8 g/kg (ISSN: 1,4-2,0 g/kg per chi si allena)
+    // - carboidrati ON 5 g/kg (parte bassa dei 5-12 g/kg ISSN: ~5-6 ore di
+    //   allenamento a settimana), OFF 3,5 g/kg; nessuna progressione (mantenimento)
+    // - grassi 0,9 g/kg (~23% delle kcal nei giorni ON)
+    // kcal: ON ~3.100, OFF ~2.550; metabolismo basale Mifflin-St Jeor ~1.940.
+    // Spuntino, quote dei pasti e grassi del pranzo nelle stesse proporzioni
+    // del piano di Arianna.
+    profile: 'ezio',
+    pesoKg: 87.5,
+    proteineGKg: 1.8,
+    grassiGKg: 0.9,
+    choGiornoSett1: { ON: 440, OFF: 300 },
+    choIncrementoSettimanale: { ON: 0, OFF: 0 },
+    settimane: 4,
+    choSpuntinoG: 120,
+    quoteCho: {
+      ON: { colazione: 34.5, pranzo: 36.4, cena: 29.1 },
+      OFF: { colazione: 33.3, pranzo: 41.0, cena: 25.6 },
+    },
+    quoteProteine: { colazione: 21, pranzo: 25, spuntino: 9, cena: 45 },
+    grassiPranzoG: 25,
+  },
 ]
 
 export function coefficientsFor(profile: ProfileId): PlanCoefficients | undefined {
   return coefficients.find((c) => c.profile === profile)
+}
+
+/** Proteine e grassi totali del giorno (g). */
+export function dailyFixedMacros(c: PlanCoefficients): { proteine: number; grassi: number } {
+  return { proteine: Math.round(c.proteineGKg * c.pesoKg), grassi: Math.round(c.grassiGKg * c.pesoKg) }
 }
 
 const r05 = (x: number) => Math.round(x * 2) / 2

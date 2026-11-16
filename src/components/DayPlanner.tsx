@@ -81,6 +81,7 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
         {meals.map((meal) => (
           <MealSection
             key={meal}
+            profile={profile}
             meal={meal}
             mealState={plan.state[meal]}
             dayType={plan.dayType}

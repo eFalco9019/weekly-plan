@@ -1,7 +1,7 @@
 import type { ChoProgressionWeek, Profile } from '../types'
 
-// Dati confermati finora. Quelli di "ezio" sono segnaposto: Ezio non ha
-// ancora mandato il suo piano macro — vanno aggiornati appena arriva.
+// Arianna: dati del piano della dietista. Ezio: stima provvisoria
+// (src/data/coefficients.ts), da aggiornare con i valori veri.
 export const profiles: Profile[] = [
   {
     id: 'arianna',
@@ -12,12 +12,13 @@ export const profiles: Profile[] = [
     grassiGFissi: 48,
   },
   {
+    // Valori stimati, vedi src/data/coefficients.ts (da sostituire con quelli veri).
     id: 'ezio',
     nome: 'Ezio',
-    pesoKg: 0, // TODO: da compilare
-    altezzaCm: 0, // TODO: da compilare
-    proteineGFisse: 0, // TODO: da compilare
-    grassiGFissi: 0, // TODO: da compilare
+    pesoKg: 87.5,
+    altezzaCm: 198,
+    proteineGFisse: 158,
+    grassiGFissi: 79,
   },
 ]
 

@@ -2,7 +2,7 @@ import type { DayState } from '../hooks/useDayPlan'
 import type { DayType, MealTemplate, MealType } from '../types'
 import { mealOrder as meals, mealLabels, mealIcons, mealColor } from '../lib/meals'
 import { calcDayChoTotals, calcMealChoBreakdown } from '../hooks/useDayPlan'
-import { splitFixedMacroByMeal } from '../lib/macroBreakdown'
+import { mealMacros } from '../lib/mealMacros'
 import { SegmentedRing, type RingSegment } from './SegmentedRing'
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   templates: MealTemplate[]
   dayType: DayType
   week: number
+  /** Target giornalieri del profilo. */
   proteinG?: number
   fatG?: number
 }
@@ -18,29 +19,29 @@ function fmt(n: number) {
   return Math.round(n)
 }
 
+/**
+ * Riepilogo del giorno: un anello per macro con quanto si mangia davvero,
+ * diviso per pasto, e il target del giorno al centro.
+ */
 export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG = 0 }: Props) {
   const { actual, target } = calcDayChoTotals(week, dayType, state, templates)
   const diff = Math.round((actual - target) * 10) / 10
   const label = dayType === 'ON' ? 'Giorno energia' : 'Giorno recupero'
 
   const cho = calcMealChoBreakdown(week, dayType, state, templates)
-  const protein = splitFixedMacroByMeal(proteinG, templates, 'targetProteinG')
-  const fat = splitFixedMacroByMeal(fatG, templates, 'targetFatG')
+  const macros = Object.fromEntries(meals.map((m) => [m, mealMacros(m, state[m])])) as Record<
+    MealType,
+    { prot: number; fat: number }
+  >
 
   const choByMeal = (m: MealType) => cho.find((c) => c.meal === m)?.actual ?? 0
-  const proteinByMeal = (m: MealType) => protein.find((p) => p.meal === m)?.targetG ?? 0
-  const fatByMeal = (m: MealType) => fat.find((p) => p.meal === m)?.targetG ?? 0
-
-  // Proteine/grassi: il piano dà un valore esplicito solo per alcuni pasti
-  // (oggi il pranzo); per gli altri è una stima — li marchiamo con "≈".
-  const isEstimate = (m: MealType, key: 'targetProteinG' | 'targetFatG') =>
-    templates.find((t) => t.meal === m)?.[key] === undefined
+  const proteinByMeal = (m: MealType) => macros[m].prot
+  const fatByMeal = (m: MealType) => macros[m].fat
+  const proteinTot = meals.reduce((a, m) => a + proteinByMeal(m), 0)
+  const fatTot = meals.reduce((a, m) => a + fatByMeal(m), 0)
 
   const segments = (valueOf: (m: MealType) => number): RingSegment[] =>
     meals.map((m) => ({ key: m, value: valueOf(m), color: mealColor(m), icon: mealIcons[m] }))
-
-  const hasProtein = proteinG > 0
-  const hasFat = fatG > 0
 
   return (
     <section className={`day-totals day-totals--${dayType.toLowerCase()}`}>
@@ -62,17 +63,17 @@ export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG 
         </figure>
 
         <figure className="day-totals__ring">
-          <SegmentedRing segments={segments(proteinByMeal)} total={proteinG} label={`Proteine ${proteinG} grammi`}>
-            <strong className="day-totals__value">{hasProtein ? proteinG : '—'}</strong>
-            <span className="day-totals__unit">{hasProtein ? 'g' : 'da inserire'}</span>
+          <SegmentedRing segments={segments(proteinByMeal)} total={proteinG} label={`Proteine ${fmt(proteinTot)} su ${proteinG} grammi`}>
+            <strong className="day-totals__value">{fmt(proteinTot)}</strong>
+            <span className="day-totals__unit">/ {proteinG} g</span>
           </SegmentedRing>
           <figcaption>Proteine</figcaption>
         </figure>
 
         <figure className="day-totals__ring">
-          <SegmentedRing segments={segments(fatByMeal)} total={fatG} label={`Grassi ${fatG} grammi`}>
-            <strong className="day-totals__value">{hasFat ? fatG : '—'}</strong>
-            <span className="day-totals__unit">{hasFat ? 'g' : 'da inserire'}</span>
+          <SegmentedRing segments={segments(fatByMeal)} total={fatG} label={`Grassi ${fmt(fatTot)} su ${fatG} grammi`}>
+            <strong className="day-totals__value">{fmt(fatTot)}</strong>
+            <span className="day-totals__unit">/ {fatG} g</span>
           </SegmentedRing>
           <figcaption>Grassi</figcaption>
         </figure>
@@ -97,37 +98,17 @@ export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG 
                 {mealLabels[m]}
               </th>
               <td>{fmt(choByMeal(m))} g</td>
-              <td>
-                {hasProtein ? (
-                  <>
-                    {isEstimate(m, 'targetProteinG') && '≈ '}
-                    {fmt(proteinByMeal(m))} g
-                  </>
-                ) : (
-                  '—'
-                )}
-              </td>
-              <td>
-                {hasFat ? (
-                  <>
-                    {isEstimate(m, 'targetFatG') && '≈ '}
-                    {fmt(fatByMeal(m))} g
-                  </>
-                ) : (
-                  '—'
-                )}
-              </td>
+              <td>{fmt(proteinByMeal(m))} g</td>
+              <td>{fmt(fatByMeal(m))} g</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {hasFat && (
-        <p className="day-totals__note">
-          Proteine per pasto: quote ricavate dalle porzioni del piano. ≈ grassi stimati: il piano li indica solo per il
-          pranzo, gli altri pasti si dividono il resto del totale giornaliero.
-        </p>
-      )}
+      <p className="day-totals__note">
+        Quanto si mangia con le scelte del giorno. Proteine contate dalle fonti proteiche, come nel piano; grassi da
+        tutti gli alimenti, olio compreso. Valori indicativi.
+      </p>
     </section>
   )
 }
