@@ -66,6 +66,16 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
         fatG={profileData?.grassiGFissi}
       />
 
+      <label className="day-planner__note">
+        Nota del giorno (es. tipo di allenamento)
+        <input
+          type="text"
+          value={plan.note}
+          placeholder="es. corsa 10 km, palestra gambe, riposo..."
+          onChange={(e) => plan.setNote(e.target.value)}
+        />
+      </label>
+
       <div className="day-planner__meals">
         {meals.map((meal) => (
           <MealSection

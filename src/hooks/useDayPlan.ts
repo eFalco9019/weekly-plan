@@ -36,17 +36,52 @@ export function storageKey(profile: ProfileId, date: string) {
 /** Legge il piano salvato (se esiste) per un profilo/data, senza montare
  * l'hook: usato dalla vista settimanale per mostrare un riepilogo di
  * tutti i 7 giorni senza istanziare un useDayPlan per ciascuno. */
-export function loadDayPlan(
-  profile: ProfileId,
-  date: string,
-): { week: number; dayType: DayType; state: DayState } | null {
+export interface StoredDayPlan {
+  week: number
+  dayType: DayType
+  state: DayState
+  /** Nota libera del giorno (es. tipo di allenamento fatto). */
+  note?: string
+}
+
+export function loadDayPlan(profile: ProfileId, date: string): StoredDayPlan | null {
   const raw = localStorage.getItem(storageKey(profile, date))
   if (!raw) return null
   try {
-    return JSON.parse(raw) as { week: number; dayType: DayType; state: DayState }
+    return JSON.parse(raw) as StoredDayPlan
   } catch {
     return null
   }
+}
+
+/** Scrive il piano di un profilo/data in localStorage, senza montare
+ * l'hook — usato da WeekView per cambiare ON/OFF direttamente dalla
+ * vista settimanale. */
+export function saveDayPlan(profile: ProfileId, date: string, plan: StoredDayPlan) {
+  localStorage.setItem(storageKey(profile, date), JSON.stringify(plan))
+}
+
+/** Cambia ON/OFF per un profilo/data senza aprire il drill-down
+ * giornaliero: mantiene la stessa settimana nutrizionale e la nota
+ * eventualmente già scritta, e resetta le scelte dei pasti ai valori
+ * di default del nuovo tipo di giornata (stessa logica di
+ * setDayTypeAndReset dentro useDayPlan). */
+export function setDayTypeForDate(profile: ProfileId, date: string, dayType: DayType) {
+  const saved = loadDayPlan(profile, date)
+  const week = saved?.week ?? 1
+  const state = defaultDayState(week, dayType)
+  saveDayPlan(profile, date, { week, dayType, state, note: saved?.note })
+}
+
+/** Scrive/aggiorna la nota del giorno (es. tipo di allenamento) senza
+ * toccare dayType/settimana/scelte — usato dalla vista settimanale per
+ * annotare rapidamente senza aprire il drill-down. */
+export function setNoteForDate(profile: ProfileId, date: string, note: string) {
+  const saved = loadDayPlan(profile, date)
+  const week = saved?.week ?? 1
+  const dayType = saved?.dayType ?? 'ON'
+  const state = saved?.state ?? defaultDayState(week, dayType)
+  saveDayPlan(profile, date, { week, dayType, state, note })
 }
 
 /** Totale CHO (effettivo vs target) di una giornata, dato lo stato dei
@@ -114,27 +149,30 @@ export function useDayPlan(profile: ProfileId, date: string) {
   const [week, setWeekState] = useState<number>(1)
   const [dayType, setDayType] = useState<DayType>('ON')
   const [state, setState] = useState<DayState>(() => defaultDayState(1, 'ON'))
+  const [note, setNote] = useState<string>('')
 
   // Carica da localStorage quando cambiano profilo/data.
   useEffect(() => {
     const raw = localStorage.getItem(storageKey(profile, date))
     if (raw) {
-      const parsed = JSON.parse(raw) as { week: number; dayType: DayType; state: DayState }
+      const parsed = JSON.parse(raw) as StoredDayPlan
       setWeekState(parsed.week)
       setDayType(parsed.dayType)
       setState(parsed.state)
+      setNote(parsed.note ?? '')
     } else {
       setWeekState(1)
       setDayType('ON')
       setState(defaultDayState(1, 'ON'))
+      setNote('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, date])
 
   // Salva a ogni modifica.
   useEffect(() => {
-    localStorage.setItem(storageKey(profile, date), JSON.stringify({ week, dayType, state }))
-  }, [profile, date, week, dayType, state])
+    localStorage.setItem(storageKey(profile, date), JSON.stringify({ week, dayType, state, note }))
+  }, [profile, date, week, dayType, state, note])
 
   const templates = useMemo(() => templatesForWeek(week), [week])
 
@@ -312,5 +350,7 @@ export function useDayPlan(profile: ProfileId, date: string) {
     toggleBlocco,
     assignRecipe,
     clearRecipe,
+    note,
+    setNote,
   }
 }
