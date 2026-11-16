@@ -8,6 +8,8 @@ import type { Recipe } from '../types'
  *   (@dietista.paolastavolone) — vedi claude/raccolta-ricette-menu-mensile.md.
  * - Colazione e cena: proposte composte SOLO con alimenti e grammature
  *   delle tabelle di equivalenza del piano (Settimana 1), da validare.
+ *   Cene sempre piatti unici proteici, niente pasta (regole confermate da
+ *   Ezio in claude/raccolta-ricette-menu-mensile.md).
  *
  * L'ingrediente `scalabile` viene adattato al target CHO del pasto quando
  * la ricetta è assegnata (src/lib/recipeEngine.ts); gli altri restano
@@ -192,7 +194,7 @@ const cene: Recipe[] = [
   },
   {
     id: 'piadina-tacchino-radicchio',
-    nome: 'Piadina integrale con tacchino e radicchio alla piastra',
+    nome: 'Piadina integrale farcita con tacchino e radicchio grigliato',
     pastoConsigliato: 'cena',
     porzioniBase: 1,
     ingredienti: [
@@ -202,13 +204,13 @@ const cene: Recipe[] = [
       { nome: 'Olio EVO', grammiBase: 10 },
     ],
     preparazione:
-      'Cuoci il tacchino a fettine e il radicchio a spicchi sulla piastra. Scalda la piadina, ' +
-      "farciscila con il tacchino e servi con il radicchio condito con l'olio a crudo.",
+      'Cuoci il tacchino a fettine e il radicchio a spicchi sulla piastra. Condisci il radicchio ' +
+      "con l'olio a crudo, poi farcisci la piadina calda con tacchino e radicchio e chiudila a rotolo.",
     fonteNote: PROPOSTA_PIANO,
   },
   {
     id: 'pollo-curry-basmati-broccoli',
-    nome: 'Pollo al curry con riso basmati e broccoli',
+    nome: 'Bowl di pollo al curry con riso basmati e broccoli',
     pastoConsigliato: 'cena',
     porzioniBase: 1,
     ingredienti: [
@@ -219,8 +221,8 @@ const cene: Recipe[] = [
       { nome: 'Curry', grammiBase: 3 },
     ],
     preparazione:
-      "Cuoci il riso basmati. Rosola il pollo a bocconcini con l'olio, aggiungi il curry e un goccio " +
-      "d'acqua e lascia cuocere 8-10 minuti. Servi con i broccoli al vapore.",
+      "Cuoci il riso basmati e i broccoli al vapore. Rosola il pollo a bocconcini con l'olio, aggiungi " +
+      "il curry e un goccio d'acqua e cuoci 8-10 minuti; unisci i broccoli e servi tutto sul riso.",
     fonteNote: PROPOSTA_PIANO,
   },
   {
@@ -235,13 +237,13 @@ const cene: Recipe[] = [
       { nome: 'Passata di pomodoro', grammiBase: 100 },
     ],
     preparazione:
-      'Cuoci le seppie a listarelle con la passata per 20 minuti, aggiungi le patate a cubetti e ' +
-      'cuoci finché sono tenere. Servi con i fagiolini lessati.',
+      'Cuoci le seppie a listarelle con la passata per 20 minuti, poi aggiungi le patate a cubetti ' +
+      'e i fagiolini spuntati e cuoci tutto insieme finché le verdure sono tenere.',
     fonteNote: PROPOSTA_PIANO,
   },
   {
     id: 'vitello-patate-dolci-valeriana',
-    nome: 'Vitello alla piastra con patate dolci al forno e valeriana',
+    nome: 'Bowl di straccetti di vitello, patate dolci al forno e valeriana',
     pastoConsigliato: 'cena',
     porzioniBase: 1,
     ingredienti: [
@@ -250,8 +252,8 @@ const cene: Recipe[] = [
       { nome: 'Valeriana', grammiBase: 200 },
     ],
     preparazione:
-      'Cuoci le patate dolci a spicchi in forno a 200 °C per circa 30 minuti. Cuoci il vitello ' +
-      'sulla piastra e servi con la valeriana.',
+      'Cuoci le patate dolci a cubetti in forno a 200 °C per circa 25 minuti. Salta il vitello a ' +
+      'straccetti in padella per 2-3 minuti e componi la bowl con valeriana, patate dolci e vitello.',
     fonteNote: PROPOSTA_PIANO,
   },
 ]
