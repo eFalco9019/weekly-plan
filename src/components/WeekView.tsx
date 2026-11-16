@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DayType, ProfileId } from '../types'
-import { weekDates, formatDayMonth, toIso } from '../lib/dateUtils'
+import { weekDates, toIso } from '../lib/dateUtils'
 import {
   loadDayPlan,
   defaultDayState,
@@ -10,9 +10,12 @@ import {
   regenerateMenu,
 } from '../hooks/useDayPlan'
 import { templatesForWeek } from '../data/weekRegistry'
+import { profiles } from '../data/profiles'
 import { describeMeal } from '../lib/mealLabel'
 import { onRemotePlanChange } from '../lib/planStore'
+import { fmtInt, rangeName, weekdayName } from '../lib/format'
 import { SyncBadge } from './SyncBadge'
+import { DayTypeSwitch } from './DayTypeSwitch'
 import { mealLabels, mealColor } from '../lib/meals'
 import type { MealType } from '../types'
 
@@ -24,11 +27,9 @@ interface Props {
   anchorDate: string
   onNavigateWeek: (deltaWeeks: number) => void
   onSelectDay: (date: string) => void
-  onChangeProfile: () => void
+  onChangeProfile: (id: ProfileId) => void
   onOpenShoppingList: () => void
 }
-
-const weekdayLabels = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
 
 export function WeekView({
   profile,
@@ -40,10 +41,13 @@ export function WeekView({
 }: Props) {
   const dates = weekDates(anchorDate)
   const todayIso = toIso(new Date())
+  const profileName = profiles.find((p) => p.id === profile)?.nome ?? ''
+  const otherProfile = profiles.find((p) => p.id !== profile)
   // Forza il ricalcolo dopo un cambio ON/OFF inline (i dati vivono in
   // localStorage, non in uno state React, quindi serve un re-render esplicito).
   const [, setTick] = useState(0)
   const [shuffledWeek, setShuffledWeek] = useState<string | null>(null)
+  const [editingNote, setEditingNote] = useState<string | null>(null)
 
   // Modifiche arrivate da un altro dispositivo: si ridisegna la settimana.
   useEffect(() => onRemotePlanChange(() => setTick((t) => t + 1)), [])
@@ -60,134 +64,137 @@ export function WeekView({
   }
 
   function handleSaveNote(date: string, note: string) {
-    setNoteForDate(profile, date, note)
+    setNoteForDate(profile, date, note.trim())
+    setEditingNote(null)
     setTick((t) => t + 1)
   }
+
+  const days = dates.map((date) => {
+    const saved = loadDayPlan(profile, date)
+    const week = saved?.week ?? 1
+    const dayType: DayType = saved?.dayType ?? 'ON'
+    const state = saved?.state ?? defaultDayState(profile, week, dayType, date)
+    const { actual, target } = calcDayChoTotals(week, dayType, state, templatesForWeek(week, profile))
+    return { date, week, dayType, state, actual, target, note: saved?.note ?? '' }
+  })
+  const cycleWeeks = [...new Set(days.map((d) => d.week))]
+  const onDays = days.filter((d) => d.dayType === 'ON').length
 
   return (
     <div className="week-view">
       <header className="week-view__header">
         <div className="week-view__heading">
-          <button className="week-view__back" onClick={onChangeProfile}>
-            ← cambia profilo
-          </button>
-          <h1>La tua settimana</h1>
-          <SyncBadge />
+          <h1>La settimana di {profileName}</h1>
+          <p className="week-view__summary">
+            Settimana {cycleWeeks.join(' e ')} del ciclo, con {onDays} {onDays === 1 ? 'giorno' : 'giorni'} ON e{' '}
+            {7 - onDays} OFF.
+          </p>
+          <div className="week-view__meta">
+            <SyncBadge />
+            {otherProfile && (
+              <button type="button" className="link-button" onClick={() => onChangeProfile(otherProfile.id)}>
+                Passa a {otherProfile.nome}
+              </button>
+            )}
+          </div>
         </div>
         <div className="week-view__toolbar">
           <div className="week-view__nav">
-            <button onClick={() => onNavigateWeek(-1)} aria-label="settimana precedente">
+            <button type="button" onClick={() => onNavigateWeek(-1)} aria-label="Settimana precedente">
               ‹
             </button>
-            <strong>
-              {formatDayMonth(dates[0])} – {formatDayMonth(dates[6])}
-            </strong>
-            <button onClick={() => onNavigateWeek(1)} aria-label="settimana successiva">
+            <strong>{rangeName(dates[0], dates[6])}</strong>
+            <button type="button" onClick={() => onNavigateWeek(1)} aria-label="Settimana successiva">
               ›
             </button>
           </div>
           <div className="week-view__actions">
-            <button className="week-view__shuffle" onClick={handleShuffleWeek}>
-              🔀 Varia il menu
+            <button type="button" className="button button--quiet" onClick={handleShuffleWeek}>
+              Varia il menu
             </button>
-            <button className="week-view__shopping" onClick={onOpenShoppingList}>
-              🛒 Lista della spesa
+            <button type="button" className="button button--primary" onClick={onOpenShoppingList}>
+              Lista della spesa
             </button>
           </div>
         </div>
         {shuffledWeek === dates[0] && (
           <p className="week-view__feedback" role="status">
-            Menu della settimana rigenerato. ON/OFF, note e ricette assegnate restano come prima.
+            Menu variato. ON/OFF, note e ricette scelte a mano restano com'erano.
           </p>
         )}
       </header>
 
-      <div className="week-view__list">
-        {dates.map((date, i) => {
-          const saved = loadDayPlan(profile, date)
-          const week = saved?.week ?? 1
-          const dayType = saved?.dayType ?? 'ON'
-          const state = saved?.state ?? defaultDayState(profile, week, dayType, date)
-          const templates = templatesForWeek(week, profile)
-          const { actual, target } = calcDayChoTotals(week, dayType, state, templates)
+      <ol className="week-view__list">
+        {days.map(({ date, dayType, state, actual, target, note }) => {
           const isToday = date === todayIso
-
+          const isEditing = editingNote === date
           return (
-            <div
+            <li
               key={date}
               className={`week-view__day week-view__day--${dayType.toLowerCase()}${isToday ? ' week-view__day--today' : ''}`}
             >
-              <div className="week-view__day-main">
-                <button
-                  type="button"
-                  className="week-view__day-open"
-                  onClick={() => onSelectDay(date)}
-                  aria-label={`Apri ${weekdayLabels[i]} ${formatDayMonth(date)}`}
-                >
-                  <div className="week-view__day-head">
-                    <span className="week-view__weekday">
-                      {weekdayLabels[i]}
-                      {isToday && <span className="week-view__today-tag">oggi</span>}
-                    </span>
-                    <span className="week-view__daynum">{formatDayMonth(date)}</span>
-                  </div>
-                  <div className="week-view__cho">
-                    <strong>{Math.round(actual * 10) / 10}</strong> / {Math.round(target * 10) / 10} g CHO ·
-                    Sett. {week}
-                  </div>
-                  <span className="week-view__menu">
-                    {mainMeals.map((meal) => {
-                      const dish = describeMeal(meal, state[meal])
-                      if (!dish) return null
-                      return (
-                        <span key={meal} className="week-view__menu-row">
-                          <span className="week-view__menu-meal">
-                            <i className="week-view__menu-dot" style={{ background: mealColor(meal) }} />
-                            {mealLabels[meal]}
-                          </span>
-                          <span className="week-view__menu-dish">{dish}</span>
+              <button
+                type="button"
+                className="week-view__day-open"
+                onClick={() => onSelectDay(date)}
+                aria-label={`Apri ${weekdayName(date)} ${new Date(`${date}T00:00:00`).getDate()}`}
+              >
+                <span className="week-view__day-head">
+                  <span className="week-view__weekday">{weekdayName(date)}</span>
+                  <span className="week-view__daynum">{new Date(`${date}T00:00:00`).getDate()}</span>
+                  {isToday && <span className="week-view__today-tag">oggi</span>}
+                </span>
+                <span className="week-view__cho">
+                  <strong>{fmtInt(actual)}</strong> su {fmtInt(target)} g di carboidrati
+                </span>
+                <span className="week-view__menu">
+                  {mainMeals.map((meal) => {
+                    const dish = describeMeal(meal, state[meal])
+                    if (!dish) return null
+                    return (
+                      <span key={meal} className="week-view__menu-row">
+                        <span className="week-view__menu-meal">
+                          <i className="week-view__menu-dot" style={{ background: mealColor(meal) }} />
+                          {mealLabels[meal]}
                         </span>
-                      )
-                    })}
-                  </span>
-                  <span className="week-view__open-hint">apri il dettaglio →</span>
-                </button>
+                        <span className="week-view__menu-dish">{dish}</span>
+                      </span>
+                    )
+                  })}
+                </span>
+              </button>
 
-                <div className="week-view__day-toggle" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className={dayType === 'ON' ? 'active active--on' : ''}
-                    onClick={() => handleToggleDayType(date, 'ON')}
-                  >
-                    ON
-                  </button>
-                  <button
-                    type="button"
-                    className={dayType === 'OFF' ? 'active active--off' : ''}
-                    onClick={() => handleToggleDayType(date, 'OFF')}
-                  >
-                    OFF
-                  </button>
-                </div>
-              </div>
+              <DayTypeSwitch
+                className="week-view__day-toggle"
+                value={dayType}
+                onChange={(t) => handleToggleDayType(date, t)}
+                label={`Tipo di giorno, ${weekdayName(date)}`}
+              />
 
-              <div className="week-view__day-note" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="text"
-                  key={`${date}-note-${saved?.note ?? ''}`}
-                  defaultValue={saved?.note ?? ''}
-                  placeholder="✎ Nota (es. corsa 10km, palestra gambe...)"
-                  onBlur={(e) => handleSaveNote(date, e.target.value)}
-                />
+              <div className="week-view__day-note">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    defaultValue={note}
+                    aria-label={`Nota di ${weekdayName(date)}`}
+                    placeholder="Allenamento del giorno, es. basket o palestra gambe"
+                    onBlur={(e) => handleSaveNote(date, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
+                      if (e.key === 'Escape') setEditingNote(null)
+                    }}
+                  />
+                ) : (
+                  <button type="button" className="week-view__note-button" onClick={() => setEditingNote(date)}>
+                    {note ? note : <span className="week-view__note-empty">Aggiungi una nota</span>}
+                  </button>
+                )}
               </div>
-            </div>
+            </li>
           )
         })}
-      </div>
-
-      <p className="week-view__nota">
-        Tocca un giorno per aprirlo nel dettaglio, oppure cambia ON/OFF direttamente da qui.
-      </p>
+      </ol>
     </div>
   )
 }

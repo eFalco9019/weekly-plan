@@ -4,6 +4,32 @@ import { mealEquivalents } from '../hooks/useDayPlan'
 import { recipes } from '../data/recipes'
 import { recipesForMeal, scaleRecipe } from '../lib/recipeEngine'
 import { mealLabels, mealIcons } from '../lib/meals'
+import { fmtInt } from '../lib/format'
+
+/** Pulsante compatto per escludere il pasto dalla compensazione automatica. */
+function LockToggle({ locked, onToggle }: { locked: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className="lock-toggle"
+      aria-pressed={locked}
+      onClick={onToggle}
+      title={locked ? 'Bloccato: gli altri pasti non lo modificano' : 'Blocca questi grammi'}
+    >
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13">
+        <rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor" />
+        <path
+          d={locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.8-1'}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+      {locked ? 'Bloccato' : 'Blocca'}
+    </button>
+  )
+}
 
 const categoriaLabels: Record<string, string> = {
   carboidrati: 'Carboidrati',
@@ -72,7 +98,7 @@ export function MealSection({
           {mealLabels[meal]}
         </h2>
         {targetCho !== undefined && targetCho > 0 && (
-          <span className="meal-section__target">{targetCho} g CHO</span>
+          <span className="meal-section__target">{fmtInt(targetCho)} g di carboidrati</span>
         )}
       </header>
 
@@ -83,16 +109,24 @@ export function MealSection({
               <div className="meal-section__ricetta-header">
                 <strong>{assignedRecipe.nome}</strong>
                 <button type="button" onClick={onClearRecipe}>
-                  togli ricetta
+                  Togli la ricetta
                 </button>
               </div>
               {scaled && (
-                <p className="meal-section__ricetta-macro">
-                  Questa porzione: <strong>{Math.round(scaled.macro.cho)} g</strong> carbo ·{' '}
-                  <strong>{Math.round(scaled.macro.prot)} g</strong> proteine ·{' '}
-                  <strong>{Math.round(scaled.macro.fat)} g</strong> grassi
-                  <span className="meal-section__ricetta-macro-note"> (valori indicativi)</span>
-                </p>
+                <dl className="meal-section__ricetta-macro" aria-label="Questa porzione, valori indicativi">
+                  <div>
+                    <dt>Carboidrati</dt>
+                    <dd>{fmtInt(scaled.macro.cho)} g</dd>
+                  </div>
+                  <div>
+                    <dt>Proteine</dt>
+                    <dd>{fmtInt(scaled.macro.prot)} g</dd>
+                  </div>
+                  <div>
+                    <dt>Grassi</dt>
+                    <dd>{fmtInt(scaled.macro.fat)} g</dd>
+                  </div>
+                </dl>
               )}
               <ul className="meal-section__ricetta-ingredienti">
                 {scaled?.ingredienti.map((ing) =>
@@ -102,11 +136,13 @@ export function MealSection({
                       <span className="meal-section__grammi">
                         <input
                           type="number"
+                          inputMode="numeric"
                           aria-label={`Grammi di ${ing.nome}`}
                           value={carboScelta?.grammi ?? ing.grammi}
                           onChange={(e) => onSetCarboGrammi(Number(e.target.value))}
                         />
                         <span>g</span>
+                        <LockToggle locked={Boolean(carboScelta?.bloccato)} onToggle={onToggleBlocco} />
                       </span>
                     </li>
                   ) : (
@@ -117,10 +153,6 @@ export function MealSection({
                   ),
                 )}
               </ul>
-              <label className="meal-section__blocco">
-                <input type="checkbox" checked={Boolean(carboScelta?.bloccato)} onChange={onToggleBlocco} />
-                blocca (escludi dalla compensazione)
-              </label>
               {assignedRecipe.preparazione && (
                 <p className="meal-section__ricetta-prep">{assignedRecipe.preparazione}</p>
               )}
@@ -139,14 +171,14 @@ export function MealSection({
             </div>
           ) : (
             <label className="meal-section__ricetta-picker">
-              Ricetta della libreria
+              <span className="visually-hidden">Usa una ricetta</span>
               <select
                 value=""
                 onChange={(e) => {
                   if (e.target.value) onAssignRecipe(e.target.value)
                 }}
               >
-                <option value="">-- scegli una ricetta (opzionale) --</option>
+                <option value="">Usa una ricetta della raccolta…</option>
                 {recipeOptions.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.nome}
@@ -165,8 +197,9 @@ export function MealSection({
         if (assignedRecipe) return null
         return (
           <div className="meal-section__categoria" key={categoria}>
-            <label>{categoriaLabels[categoria] ?? categoria}</label>
+            <label htmlFor={`${meal}-${categoria}`}>{categoriaLabels[categoria] ?? categoria}</label>
             <select
+              id={`${meal}-${categoria}`}
               value={scelta.alimento}
               onChange={(e) => onSetAlimento(categoria, e.target.value)}
             >
@@ -181,31 +214,20 @@ export function MealSection({
               <div className="meal-section__grammi">
                 <input
                   type="number"
+                  inputMode="numeric"
+                  aria-label={`Grammi di ${scelta.alimento}`}
                   value={scelta.grammi}
                   onChange={(e) => onSetCarboGrammi(Number(e.target.value))}
                 />
                 <span>g</span>
-                <label className="meal-section__blocco">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(scelta.bloccato)}
-                    onChange={onToggleBlocco}
-                  />
-                  blocca (escludi dalla compensazione)
-                </label>
+                <LockToggle locked={Boolean(scelta.bloccato)} onToggle={onToggleBlocco} />
               </div>
             ) : (
-              <span className="meal-section__grammi-fisse">{scelta.grammi} g</span>
+              <span className="meal-section__grammi-fisse">{fmtInt(scelta.grammi)} g</span>
             )}
           </div>
         )
       })}
-      {carboScelta && targetCho !== undefined && targetCho > 0 && (
-        <p className="meal-section__nota">
-          Cambiando i grammi qui, gli altri pasti non bloccati della giornata si
-          adattano in automatico per mantenere il totale di CHO giornaliero.
-        </p>
-      )}
     </section>
   )
 }

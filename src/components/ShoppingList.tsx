@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { weekDates, formatDayMonth } from '../lib/dateUtils'
+import { weekDates } from '../lib/dateUtils'
+import { fmtWeight, rangeName } from '../lib/format'
 import { loadDayPlan, defaultDayState } from '../hooks/useDayPlan'
 import { templatesForWeek } from '../data/weekRegistry'
 import { profiles } from '../data/profiles'
@@ -60,18 +61,17 @@ export function ShoppingList({ anchorDate, onBack }: Props) {
   return (
     <div className="shopping-list">
       <header className="shopping-list__header">
-        <button className="shopping-list__back" onClick={onBack}>
-          ← torna alla settimana
+        <button type="button" className="link-button" onClick={onBack}>
+          ‹ Settimana
         </button>
-        <h1>🛒 Spesa {formatDayMonth(dates[0])} – {formatDayMonth(dates[6])}</h1>
+        <h1>Spesa del {rangeName(dates[0], dates[6])}</h1>
         <p className="shopping-list__nota">
-          Ingredienti e grammature totali per Ezio e Arianna, per i 7 giorni di questa
-          settimana (giorni non ancora aperti usano il piano di default).
+          Per {profiles.map((p) => p.nome).join(' e ')}, tutti e 7 i giorni, olio compreso.
         </p>
       </header>
 
       {grouped.length === 0 ? (
-        <p>Nessun ingrediente trovato per questa settimana.</p>
+        <p>Questa settimana non ha ancora pasti da comprare.</p>
       ) : (
         grouped.map((group) => (
           <section className="shopping-list__group" data-categoria={group.categoria} key={group.categoria}>
@@ -88,7 +88,7 @@ export function ShoppingList({ anchorDate, onBack }: Props) {
                     <label>
                       <input type="checkbox" checked={isChecked} onChange={() => toggle(key)} />
                       <span className="shopping-list__nome">{item.nome}</span>
-                      <span className="shopping-list__grammi">{item.grammi} g</span>
+                      <span className="shopping-list__grammi">{fmtWeight(item.grammi)}</span>
                     </label>
                   </li>
                 )

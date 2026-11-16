@@ -3,6 +3,7 @@ import type { DayType, MealTemplate, MealType } from '../types'
 import { recipes } from '../data/recipes'
 import { scaleRecipe } from './recipeEngine'
 import { ingredientInfo } from '../data/ingredients'
+import { foodComponents } from '../data/foodComponents'
 
 export interface ShoppingItem {
   nome: string
@@ -53,6 +54,13 @@ function recipeMealGrams(scelta: MealChoice): { nome: string; categoria: string;
   }))
 }
 
+/** Nome da lista della spesa: senza le note tra parentesi del piano
+ * ("Philadelphia Active (~11g prot/100g)" diventa "Philadelphia Active"). */
+export function shoppingName(nome: string): string {
+  const clean = nome.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim()
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : nome
+}
+
 export function buildShoppingList(entries: DayPlanEntry[]): ShoppingItem[] {
   const totals = new Map<string, ShoppingItem>()
 
@@ -67,15 +75,24 @@ export function buildShoppingList(entries: DayPlanEntry[]): ShoppingItem[] {
         ? [recipeMealGrams(recipeChoice)]
         : Object.entries(mealState.scelte)
             .filter(([, scelta]) => scelta && scelta.grammi > 0)
-            .map(([categoria, scelta]) => [{ nome: scelta.alimento, categoria, grammi: scelta.grammi }])
+            // Alimenti composti del piano ("uovo + albume", "frutta + noci",
+            // proteina + olio EVO) diventano i singoli ingredienti da comprare.
+            .map(([categoria, scelta]) =>
+              foodComponents(meal, scelta.alimento, scelta.grammi).map((c) => ({
+                nome: c.nome,
+                categoria: c.nome === scelta.alimento ? categoria : (ingredientInfo(c.nome)?.cat ?? categoria),
+                grammi: c.grammi,
+              })),
+            )
       for (const items of groups) {
         for (const item of items) {
-          const key = `${item.nome}__${item.categoria}`
+          const nome = shoppingName(item.nome)
+          const key = `${nome.toLowerCase()}__${item.categoria}`
           const existing = totals.get(key)
           if (existing) {
             existing.grammi += item.grammi
           } else {
-            totals.set(key, { ...item })
+            totals.set(key, { ...item, nome })
           }
         }
       }

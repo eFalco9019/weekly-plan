@@ -4,6 +4,7 @@ import { mealOrder as meals, mealLabels, mealIcons, mealColor } from '../lib/mea
 import { calcDayChoTotals, calcMealChoBreakdown } from '../hooks/useDayPlan'
 import { mealMacros } from '../lib/mealMacros'
 import { SegmentedRing, type RingSegment } from './SegmentedRing'
+import { fmt1 } from '../lib/format'
 
 interface Props {
   state: DayState
@@ -48,8 +49,11 @@ export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG 
       <div className="day-totals__head">
         <span className="day-totals__label">{label}</span>
         <span className="day-totals__sub">
-          Carboidrati{' '}
-          {diff === 0 ? 'in linea con il target' : diff > 0 ? `${diff} g sopra il target` : `${Math.abs(diff)} g sotto il target`}
+          {Math.abs(diff) < 0.5
+            ? 'Carboidrati in linea con il piano'
+            : diff > 0
+              ? `Carboidrati: ${fmt1(diff)} g sopra il piano`
+              : `Carboidrati: ${fmt1(Math.abs(diff))} g sotto il piano`}
         </span>
       </div>
 
@@ -106,8 +110,8 @@ export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG 
       </table>
 
       <p className="day-totals__note">
-        Quanto si mangia con le scelte del giorno. Proteine contate dalle fonti proteiche, come nel piano; grassi da
-        tutti gli alimenti, olio compreso. Valori indicativi.
+        Valori indicativi. Le proteine contano solo le fonti proteiche, come nel piano; i grassi tutti gli alimenti,
+        olio compreso.
       </p>
     </section>
   )

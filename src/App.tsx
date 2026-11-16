@@ -51,7 +51,7 @@ function App() {
       anchorDate={anchorDate}
       onNavigateWeek={(deltaWeeks) => setAnchorDate((d) => shiftWeek(d, deltaWeeks))}
       onSelectDay={(date) => setView({ mode: 'day', date })}
-      onChangeProfile={() => setProfile(null)}
+      onChangeProfile={setProfile}
       onOpenShoppingList={() => setView({ mode: 'shopping' })}
     />
   )
