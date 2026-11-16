@@ -35,6 +35,15 @@ const db: Record<string, IngredientInfo> = {
   ceci: { cho: 18, prot: 8, fat: 2.5, contaCho: true, cat: 'carboidrati' }, // lessati / in scatola sgocciolati
   piselli: { cho: 9, prot: 5.5, fat: 0.4, contaCho: true, cat: 'carboidrati' },
   'castagne cotte': { cho: 28, prot: 2, fat: 1.4, contaCho: true, cat: 'carboidrati' },
+  'biscotti senza zuccheri aggiunti': { cho: 65, prot: 8, fat: 14, contaCho: true, cat: 'carboidrati' },
+  muesli: { cho: 62, prot: 9, fat: 7, contaCho: true, cat: 'carboidrati' },
+  'farina di riso': { cho: 80, prot: 6, fat: 1.4, contaCho: true, cat: 'carboidrati' },
+  'fiocchi di riso': { cho: 80, prot: 6.5, fat: 0.6, contaCho: true, cat: 'carboidrati' },
+  'gallette grano saraceno': { cho: 72, prot: 11, fat: 3, contaCho: true, cat: 'carboidrati' },
+  'grano saraceno': { cho: 65, prot: 12.4, fat: 3.3, contaCho: true, cat: 'carboidrati' },
+  'pasta grano saraceno': { cho: 68, prot: 13, fat: 2.5, contaCho: true, cat: 'carboidrati' },
+  'pasta di timilia': { cho: 68, prot: 13, fat: 1.5, contaCho: true, cat: 'carboidrati' },
+  "pasta d'avena": { cho: 60, prot: 13, fat: 4, contaCho: true, cat: 'carboidrati' },
 
   // Proteine
   bresaola: { cho: 0.4, prot: 32, fat: 2.6, cat: 'proteine' },
@@ -48,6 +57,16 @@ const db: Record<string, IngredientInfo> = {
   albume: { cho: 0.7, prot: 11, fat: 0.2, cat: 'proteine' },
   'uovo intero': { cho: 0.7, prot: 12.5, fat: 10, cat: 'proteine' },
   'yogurt greco 0%': { cho: 4, prot: 10, fat: 0, cat: 'proteine' },
+  'proteine whey isolate 90%': { cho: 2, prot: 90, fat: 1, cat: 'proteine' },
+  'philadelphia active': { cho: 4, prot: 11, fat: 5, cat: 'proteine' },
+  'tonno al naturale sgocciolato': { cho: 0, prot: 25, fat: 1, cat: 'proteine' },
+  'pesce persico': { cho: 0, prot: 18, fat: 0.7, cat: 'proteine' },
+  'roast beef magro': { cho: 0.5, prot: 25, fat: 4, cat: 'proteine' },
+  'hamburger bovino magro': { cho: 0, prot: 20, fat: 5, cat: 'proteine' },
+  'feta light': { cho: 1, prot: 20, fat: 9, cat: 'proteine' },
+  'ricotta di pecora': { cho: 4, prot: 9.5, fat: 11.5, cat: 'proteine' },
+  'prosciutto crudo sgrassato': { cho: 0, prot: 28, fat: 4, cat: 'proteine' },
+  'parmigiano 36 mesi': { cho: 0, prot: 33, fat: 28, cat: 'proteine' },
 
   // Grassi
   noci: { cho: 5, prot: 14.3, fat: 68, cat: 'grassi' },
@@ -55,10 +74,14 @@ const db: Record<string, IngredientInfo> = {
   'cioccolato fondente 85%': { cho: 19, prot: 10, fat: 50, cat: 'grassi' },
   'burro 100% frutta secca': { cho: 10, prot: 22, fat: 52, cat: 'grassi' },
   'olio evo': { cho: 0, prot: 0, fat: 100, cat: 'grassi' },
+  'burro ghee': { cho: 0, prot: 0.3, fat: 99.5, cat: 'grassi' },
+  nocciole: { cho: 6, prot: 14, fat: 61, cat: 'grassi' },
+  olive: { cho: 1, prot: 1, fat: 15, cat: 'grassi' },
 
   // Frutta
   'frutta fresca': { cho: 10, prot: 0.5, fat: 0.2, cat: 'frutta' },
   'marmellata hero light': { cho: 30, prot: 0.3, fat: 0.1, cat: 'frutta' },
+  mandarini: { cho: 9, prot: 0.8, fat: 0.3, cat: 'frutta' },
 
   // Verdure
   radicchio: { cho: 1.6, prot: 1.4, fat: 0.1, cat: 'verdura' },
@@ -70,6 +93,9 @@ const db: Record<string, IngredientInfo> = {
   fagiolini: { cho: 2.4, prot: 2, fat: 0.1, cat: 'verdura' },
   valeriana: { cho: 0.7, prot: 2, fat: 0.4, cat: 'verdura' },
   'passata di pomodoro': { cho: 3, prot: 1.3, fat: 0.2, cat: 'verdura' },
+  finocchi: { cho: 1, prot: 1.2, fat: 0.2, cat: 'verdura' },
+  carote: { cho: 7.6, prot: 1.1, fat: 0.2, cat: 'verdura' },
+  bieta: { cho: 2.8, prot: 1.3, fat: 0.1, cat: 'verdura' },
 
   // Erbe, spezie, aromi (quantità trascurabili)
   'erbe e spezie': { cho: 0, prot: 0, fat: 0, cat: 'aromi' },
@@ -93,6 +119,13 @@ const aliases: Record<string, string> = {
   'scorza di limone': 'erbe e spezie',
   cannella: 'erbe e spezie',
   curry: 'erbe e spezie',
+  'philadelphia active (~11g prot/100g)': 'philadelphia active',
+  'patate dolci americane': 'patate dolci',
+  'bieta o bietole': 'bieta',
+  'pesce persico o altro pesce magro': 'pesce persico',
+  'altro pesce magro': 'pesce persico',
+  'castagne al vapore': 'castagne cotte',
+  'yogurt greco': 'yogurt greco 0%',
 }
 
 export function ingredientInfo(nome: string): IngredientInfo | undefined {

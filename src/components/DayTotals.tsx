@@ -122,10 +122,10 @@ export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG 
         </tbody>
       </table>
 
-      {(hasProtein || hasFat) && (
+      {hasFat && (
         <p className="day-totals__note">
-          ≈ stima: il piano indica proteine e grassi esatti solo per il pranzo, gli altri pasti si dividono il resto del
-          totale giornaliero.
+          Proteine per pasto: quote ricavate dalle porzioni del piano. ≈ grassi stimati: il piano li indica solo per il
+          pranzo, gli altri pasti si dividono il resto del totale giornaliero.
         </p>
       )}
     </section>

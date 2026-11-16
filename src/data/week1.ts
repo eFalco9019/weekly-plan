@@ -1,4 +1,5 @@
 import type { MealTemplate } from '../types'
+import { coefficientsFor, templatesFromCoefficients } from './coefficients'
 import { buildFoodEquivalents, type RawFood } from '../lib/foodEquivalents'
 
 // Dati raccolti da Ezio per il profilo "arianna" (Ary), Settimana 1.
@@ -6,14 +7,9 @@ import { buildFoodEquivalents, type RawFood } from '../lib/foodEquivalents'
 // medio (47.5 / 32.5) come target di riferimento per il motore di
 // compensazione.
 
-export const week1Templates: MealTemplate[] = [
-  { week: 1, meal: 'colazione', targetChoOnG: 47.5, targetChoOffG: 32.5 },
-  { week: 1, meal: 'pranzo', targetChoOnG: 50, targetChoOffG: 40, targetProteinG: 30, targetFatG: 15 },
-  { week: 1, meal: 'cena', targetChoOnG: 40, targetChoOffG: 25 },
-  // Lo spuntino nel piano non ha un target di CHO esplicito (è a scelta
-  // libera tra combinazioni) -> 0 = il motore non lo userà per compensare.
-  { week: 1, meal: 'spuntino', targetChoOnG: 0, targetChoOffG: 0 },
-]
+// Target dei pasti calcolati dai coefficienti del piano (src/data/coefficients.ts):
+// coincidono con i target scritti in origine entro 0,5 g di carboidrati.
+export const week1Templates: MealTemplate[] = templatesFromCoefficients(coefficientsFor('arianna')!, 1)
 
 const colazioneCarbo: RawFood[] = [
   { alimento: 'Pane tostato', categoria: 'carboidrati', grammiOn: 85, grammiOff: 60 },

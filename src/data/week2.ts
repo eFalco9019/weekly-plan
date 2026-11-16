@@ -1,4 +1,5 @@
 import type { MealTemplate } from '../types'
+import { coefficientsFor, templatesFromCoefficients } from './coefficients'
 import { week1Colazione, week1Pranzo, week1Cena, week1Spuntino } from './week1'
 import { scaleCarbGroup, carryOverGroup } from './weekBuilder'
 
@@ -10,12 +11,9 @@ import { scaleCarbGroup, carryOverGroup } from './weekBuilder'
 // Somma target trackable (colazione+pranzo+cena):
 //  ON  147.5g (200 - 52.5 di spuntino fisso) -> 51+54+43=148 (≈, "circa")
 //  OFF 107.5g (160 - 52.5)                   -> 36+44+28=108 (≈, "circa")
-export const week2Templates: MealTemplate[] = [
-  { week: 2, meal: 'colazione', targetChoOnG: 51, targetChoOffG: 36 },
-  { week: 2, meal: 'pranzo', targetChoOnG: 54, targetChoOffG: 44, targetProteinG: 30, targetFatG: 15 },
-  { week: 2, meal: 'cena', targetChoOnG: 43, targetChoOffG: 28 },
-  { week: 2, meal: 'spuntino', targetChoOnG: 0, targetChoOffG: 0 },
-]
+// Target dei pasti calcolati dai coefficienti del piano (src/data/coefficients.ts):
+// coincidono con i target scritti in origine entro 0,5 g di carboidrati.
+export const week2Templates: MealTemplate[] = templatesFromCoefficients(coefficientsFor('arianna')!, 2)
 
 export const week2Colazione = {
   carboidrati: scaleCarbGroup('colazione', week2Templates[0], week1Colazione.carboidrati),
