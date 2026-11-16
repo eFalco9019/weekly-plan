@@ -11,7 +11,7 @@ interface Props {
   onBack: () => void
 }
 
-const categoriaOrder = ['carboidrati', 'proteine', 'grassi', 'ricetta', 'frutta', 'verdura', 'fruttaGrassi', 'alternativePome']
+const categoriaOrder = ['carboidrati', 'proteine', 'grassi', 'frutta', 'verdura', 'fruttaGrassi', 'alternativePome', 'aromi']
 
 export function ShoppingList({ anchorDate, onBack }: Props) {
   const dates = weekDates(anchorDate)

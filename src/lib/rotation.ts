@@ -29,12 +29,17 @@ export function dayNumber(iso: string): number {
  *   due giorni consecutivi restano sempre diversi.
  */
 export function rotationIndex(date: string, key: string, n: number, seed = 0): number {
+  return rotationIndexAt(dayNumber(date), key, n, seed)
+}
+
+/** Come rotationIndex, ma con il giorno già espresso come numero (dayNumber). */
+export function rotationIndexAt(day: number, key: string, n: number, seed = 0): number {
   if (n <= 1) return 0
   const h = hash(key)
   const candidates = [1, 2, 3, 4, 5].filter((s) => s % n !== 0 && gcd(s, n) === 1)
   const stride = candidates[h % candidates.length] ?? 1
   const offset = h % n
-  const raw = (dayNumber(date) + seed) * stride + offset
+  const raw = (day + seed) * stride + offset
   return ((raw % n) + n) % n
 }
 

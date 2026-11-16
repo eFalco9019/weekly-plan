@@ -54,6 +54,9 @@ export interface RebalanceInput {
     template: MealTemplate
     choice: DayMealChoice
     equivalent: FoodEquivalent // l'alimento-carboidrato scelto per questo pasto
+    /** CHO del pasto che non dipendono dalla grammatura modificabile
+     * (es. ceci o castagne di una ricetta): restano fissi. */
+    choFissiG?: number
   }>
   /** Il pasto che l'utente ha appena modificato manualmente. */
   editedMeal: MealType
@@ -79,7 +82,7 @@ export function rebalanceDay(input: RebalanceInput): RebalanceResultMeal[] {
   const edited = meals.find((m) => m.meal === editedMeal)
   if (!edited) return []
 
-  const editedActualCho = calcMealCho(edited.choice, edited.equivalent)
+  const editedActualCho = calcMealCho(edited.choice, edited.equivalent) + (edited.choFissiG ?? 0)
   const editedTargetCho = targetOf(edited.template)
   const delta = editedActualCho - editedTargetCho // >0 = ha mangiato più CHO del previsto
 
@@ -113,11 +116,12 @@ export function rebalanceDay(input: RebalanceInput): RebalanceResultMeal[] {
     const share = delta * weight
     const newTargetForMeal = targetOf(m.template) - share
     const choPer100g = m.equivalent.choPer100g ?? 0
-    const newGrams = Math.max(0, choTargetToGrams(newTargetForMeal, choPer100g))
+    const fissi = m.choFissiG ?? 0
+    const newGrams = Math.max(0, choTargetToGrams(newTargetForMeal - fissi, choPer100g))
     results.push({
       meal: m.meal,
       grammiAggiornati: newGrams,
-      choEffettivo: (newGrams * choPer100g) / 100,
+      choEffettivo: (newGrams * choPer100g) / 100 + fissi,
     })
   }
 

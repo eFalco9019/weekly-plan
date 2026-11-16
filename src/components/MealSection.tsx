@@ -2,7 +2,7 @@ import type { MealState } from '../hooks/useDayPlan'
 import type { DayType, MealTemplate, MealType } from '../types'
 import { mealEquivalents } from '../hooks/useDayPlan'
 import { recipes } from '../data/recipes'
-import { recipesForMeal, scaleRecipeToMeal } from '../lib/recipeEngine'
+import { recipesForMeal, scaleRecipe } from '../lib/recipeEngine'
 import { mealLabels, mealIcons } from '../lib/meals'
 
 const categoriaLabels: Record<string, string> = {
@@ -51,10 +51,14 @@ export function MealSection({
   const assignedRecipe = carboScelta?.recipeId
     ? recipes.find((r) => r.id === carboScelta.recipeId)
     : undefined
-  const scaledIngredients =
-    assignedRecipe && targetCho !== undefined
-      ? scaleRecipeToMeal(assignedRecipe, { targetChoG: targetCho, porzioni: 1 })
-      : []
+  const scaled =
+    assignedRecipe && carboScelta
+      ? scaleRecipe(assignedRecipe, {
+          targetChoG: targetCho ?? 0,
+          density: carboScelta.choPer100gOverride ?? 0,
+          scalabileGrammi: carboScelta.grammi,
+        })
+      : undefined
 
   return (
     <section className={`meal-section meal-section--${meal}`}>
@@ -75,27 +79,59 @@ export function MealSection({
           {assignedRecipe ? (
             <div className="meal-section__ricetta-card">
               <div className="meal-section__ricetta-header">
-                <strong>🍝 {assignedRecipe.nome}</strong>
+                <strong>{assignedRecipe.nome}</strong>
                 <button type="button" onClick={onClearRecipe}>
-                  rimuovi ricetta
+                  togli ricetta
                 </button>
               </div>
+              {scaled && (
+                <p className="meal-section__ricetta-macro">
+                  Questa porzione: <strong>{Math.round(scaled.macro.cho)} g</strong> carbo ·{' '}
+                  <strong>{Math.round(scaled.macro.prot)} g</strong> proteine ·{' '}
+                  <strong>{Math.round(scaled.macro.fat)} g</strong> grassi
+                  <span className="meal-section__ricetta-macro-note"> (valori indicativi)</span>
+                </p>
+              )}
               <ul className="meal-section__ricetta-ingredienti">
-                {scaledIngredients.map((ing) => (
-                  <li key={ing.nome}>
-                    {ing.nome}: {ing.grammi} g
-                  </li>
-                ))}
+                {scaled?.ingredienti.map((ing) =>
+                  ing.scalabile ? (
+                    <li key={ing.nome} className="meal-section__ricetta-scalabile">
+                      <span>{ing.nome}</span>
+                      <span className="meal-section__grammi">
+                        <input
+                          type="number"
+                          aria-label={`Grammi di ${ing.nome}`}
+                          value={carboScelta?.grammi ?? ing.grammi}
+                          onChange={(e) => onSetCarboGrammi(Number(e.target.value))}
+                        />
+                        <span>g</span>
+                      </span>
+                    </li>
+                  ) : (
+                    <li key={ing.nome}>
+                      <span>{ing.nome}</span>
+                      <span>{ing.grammi} g</span>
+                    </li>
+                  ),
+                )}
               </ul>
+              <label className="meal-section__blocco">
+                <input type="checkbox" checked={Boolean(carboScelta?.bloccato)} onChange={onToggleBlocco} />
+                blocca (escludi dalla compensazione)
+              </label>
               {assignedRecipe.preparazione && (
                 <p className="meal-section__ricetta-prep">{assignedRecipe.preparazione}</p>
               )}
-              {assignedRecipe.fonteUrl && (
+              {(assignedRecipe.fonteUrl || assignedRecipe.fonteNote) && (
                 <p className="meal-section__ricetta-fonte">
                   Fonte:{' '}
-                  <a href={assignedRecipe.fonteUrl} target="_blank" rel="noreferrer">
-                    {assignedRecipe.fonteNote ?? assignedRecipe.fonteUrl}
-                  </a>
+                  {assignedRecipe.fonteUrl ? (
+                    <a href={assignedRecipe.fonteUrl} target="_blank" rel="noreferrer">
+                      {assignedRecipe.fonteNote ?? assignedRecipe.fonteUrl}
+                    </a>
+                  ) : (
+                    assignedRecipe.fonteNote
+                  )}
                 </p>
               )}
             </div>
@@ -123,7 +159,8 @@ export function MealSection({
       {Object.entries(groups).map(([categoria, items]) => {
         const scelta = mealState.scelte[categoria]
         if (!scelta) return null
-        if (categoria === 'carboidrati' && assignedRecipe) return null
+        // Con una ricetta il pasto è la ricetta intera: niente categorie da tabella.
+        if (assignedRecipe) return null
         return (
           <div className="meal-section__categoria" key={categoria}>
             <label>{categoriaLabels[categoria] ?? categoria}</label>

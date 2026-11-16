@@ -594,41 +594,85 @@ button {
 }
 
 .meal-section__ricetta-card {
-  background: var(--carb-soft);
+  background: var(--paper);
   border-radius: var(--radius-md);
   padding: 14px;
+  text-align: left;
 }
 
 .meal-section__ricetta-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  gap: 10px;
 }
 
 .meal-section__ricetta-header strong {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: 1.02rem;
+  font-size: 1.08rem;
+  line-height: 1.25;
 }
 
 .meal-section__ricetta-header button {
   font-size: 0.74rem;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid var(--carb);
-  background: #fff;
-  color: var(--carb);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
   cursor: pointer;
   flex-shrink: 0;
 }
 
-.meal-section__ricetta-ingredienti {
-  margin: 0 0 8px;
-  padding-left: 18px;
-  font-size: 0.85rem;
+.meal-section__ricetta-macro {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.meal-section__ricetta-macro strong {
   color: var(--ink);
+  font-weight: 600;
+}
+
+.meal-section__ricetta-macro-note {
+  font-size: 0.74rem;
+}
+
+.meal-section__ricetta-ingredienti {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  font-size: 0.88rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-section__ricetta-ingredienti li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.meal-section__ricetta-ingredienti li:first-child {
+  border-top: none;
+}
+
+.meal-section__ricetta-ingredienti li > span:last-child {
+  color: var(--ink-soft);
+}
+
+.meal-section__ricetta-scalabile {
+  font-weight: 600;
+}
+
+.meal-section__ricetta-card .meal-section__blocco {
+  margin: 0 0 10px;
 }
 
 .meal-section__ricetta-prep {
@@ -1007,7 +1051,7 @@ button {
   background: var(--fat);
 }
 
-.shopping-list__group[data-categoria='ricetta'] .shopping-list__dot {
+.shopping-list__group[data-categoria='aromi'] .shopping-list__dot {
   background: var(--energia);
 }
 

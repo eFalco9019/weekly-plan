@@ -1,7 +1,8 @@
 import type { DayState, MealChoice } from '../hooks/useDayPlan'
 import type { DayType, MealTemplate, MealType } from '../types'
 import { recipes } from '../data/recipes'
-import { scaleRecipeToMeal } from './recipeEngine'
+import { scaleRecipe } from './recipeEngine'
+import { ingredientInfo } from '../data/ingredients'
 
 export interface ShoppingItem {
   nome: string
@@ -17,7 +18,7 @@ const categoriaLabels: Record<string, string> = {
   verdura: 'Verdure',
   fruttaGrassi: 'Frutta + grassi',
   alternativePome: 'Alternative pomeridiane',
-  ricetta: 'Da ricette',
+  aromi: 'Erbe e aromi',
 }
 
 export function categoriaLabel(categoria: string): string {
@@ -33,35 +34,25 @@ export interface DayPlanEntry {
   templates: MealTemplate[]
 }
 
-function mealChoiceGrams(
-  meal: MealType,
-  categoria: string,
-  scelta: MealChoice,
-  templates: MealTemplate[],
-  dayType: DayType,
-): { nome: string; categoria: string; grammi: number }[] {
-  if (categoria === 'carboidrati' && scelta.recipeId) {
-    const recipe = recipes.find((r) => r.id === scelta.recipeId)
-    if (!recipe) return []
-    const template = templates.find((t) => t.meal === meal)
-    const targetCho = template ? (dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG) : 0
-    const scaled = scaleRecipeToMeal(recipe, { targetChoG: targetCho, porzioni: 1 })
-    return scaled.map((ing) => ({ nome: ing.nome, categoria: 'ricetta', grammi: ing.grammi }))
-  }
-  return [{ nome: scelta.alimento, categoria, grammi: scelta.grammi }]
+/** Ingredienti di un pasto-ricetta, con la grammatura effettiva
+ * dell'ingrediente scalabile (già adattata al target / compensata). */
+function recipeMealGrams(scelta: MealChoice): { nome: string; categoria: string; grammi: number }[] {
+  const recipe = recipes.find((r) => r.id === scelta.recipeId)
+  if (!recipe) return []
+  const scaled = scaleRecipe(recipe, {
+    targetChoG: 0,
+    density: scelta.choPer100gOverride ?? 0,
+    scalabileGrammi: scelta.grammi,
+  })
+  return scaled.ingredienti.map((ing) => ({
+    nome: ing.nome,
+    // Stesso reparto degli alimenti da tabella, così lo stesso alimento
+    // (es. merluzzo) si somma invece di finire in un gruppo a parte.
+    categoria: ingredientInfo(ing.nome)?.cat ?? 'aromi',
+    grammi: ing.grammi,
+  }))
 }
 
-/**
- * Aggrega gli ingredienti di più giorni (es. i 7 giorni di una settimana,
- * eventualmente per più profili) in un'unica lista della spesa, con le
- * grammature totali per ingrediente.
- *
- * Nota: se un pasto ha sia una ricetta assegnata sia altre categorie a
- * tabella (es. proteine), entrambe vengono conteggiate — è lo stesso
- * comportamento del drill-down giornaliero (MealSection), che non
- * deduplica automaticamente gli ingredienti di una ricetta con le
- * categorie standard dello stesso pasto.
- */
 export function buildShoppingList(entries: DayPlanEntry[]): ShoppingItem[] {
   const totals = new Map<string, ShoppingItem>()
 
@@ -69,9 +60,15 @@ export function buildShoppingList(entries: DayPlanEntry[]): ShoppingItem[] {
     for (const meal of ['colazione', 'pranzo', 'cena', 'spuntino'] as MealType[]) {
       const mealState = entry.state[meal]
       if (!mealState) continue
-      for (const [categoria, scelta] of Object.entries(mealState.scelte)) {
-        if (!scelta || scelta.grammi <= 0) continue
-        const items = mealChoiceGrams(meal, categoria, scelta, entry.templates, entry.dayType)
+      const recipeChoice = mealState.scelte.carboidrati
+      // Un pasto-ricetta è la ricetta intera: le altre categorie del pasto
+      // non vanno comprate (niente doppio conteggio).
+      const groups: { nome: string; categoria: string; grammi: number }[][] = recipeChoice?.recipeId
+        ? [recipeMealGrams(recipeChoice)]
+        : Object.entries(mealState.scelte)
+            .filter(([, scelta]) => scelta && scelta.grammi > 0)
+            .map(([categoria, scelta]) => [{ nome: scelta.alimento, categoria, grammi: scelta.grammi }])
+      for (const items of groups) {
         for (const item of items) {
           const key = `${item.nome}__${item.categoria}`
           const existing = totals.get(key)
