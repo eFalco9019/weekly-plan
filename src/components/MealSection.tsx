@@ -23,6 +23,7 @@ interface Props {
   meal: MealType
   mealState: MealState
   dayType: DayType
+  week: number
   template?: MealTemplate
   onSetAlimento: (categoria: string, alimento: string) => void
   onSetCarboGrammi: (grammi: number) => void
@@ -33,12 +34,13 @@ export function MealSection({
   meal,
   mealState,
   dayType,
+  week,
   template,
   onSetAlimento,
   onSetCarboGrammi,
   onToggleBlocco,
 }: Props) {
-  const groups = mealEquivalents(meal)
+  const groups = mealEquivalents(week, meal)
   const targetCho = template
     ? dayType === 'ON'
       ? template.targetChoOnG

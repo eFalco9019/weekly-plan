@@ -7,9 +7,10 @@ interface Props {
   state: DayState
   templates: MealTemplate[]
   dayType: DayType
+  week: number
 }
 
-export function DayTotals({ state, templates, dayType }: Props) {
+export function DayTotals({ state, templates, dayType, week }: Props) {
   let totalActual = 0
   let totalTarget = 0
 
@@ -17,7 +18,7 @@ export function DayTotals({ state, templates, dayType }: Props) {
     const template = templates.find((t) => t.meal === meal)
     const scelta = state[meal].scelte.carboidrati
     if (!template || !scelta) continue
-    const equivalent = mealEquivalents(meal).carboidrati.find((e) => e.alimento === scelta.alimento)
+    const equivalent = mealEquivalents(week, meal).carboidrati.find((e) => e.alimento === scelta.alimento)
     if (!equivalent) continue
     totalActual += calcMealCho(
       { profile: 'ezio', date: '', meal, categoria: 'carboidrati', alimento: scelta.alimento, grammi: scelta.grammi },

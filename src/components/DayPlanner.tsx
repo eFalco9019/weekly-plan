@@ -50,7 +50,7 @@ export function DayPlanner({ profile, date, onDateChange, onChangeProfile }: Pro
         </div>
       </header>
 
-      <DayTotals state={plan.state} templates={plan.templates} dayType={plan.dayType} />
+      <DayTotals state={plan.state} templates={plan.templates} dayType={plan.dayType} week={plan.week} />
 
       <div className="day-planner__meals">
         {meals.map((meal) => (
@@ -59,6 +59,7 @@ export function DayPlanner({ profile, date, onDateChange, onChangeProfile }: Pro
             meal={meal}
             mealState={plan.state[meal]}
             dayType={plan.dayType}
+            week={plan.week}
             template={plan.templates.find((t) => t.meal === meal)}
             onSetAlimento={(categoria, alimento) => plan.setAlimento(meal, categoria, alimento)}
             onSetCarboGrammi={(grammi) => plan.setCarboGrammi(meal, grammi)}
@@ -66,13 +67,6 @@ export function DayPlanner({ profile, date, onDateChange, onChangeProfile }: Pro
           />
         ))}
       </div>
-
-      {plan.week !== 1 && (
-        <p className="day-planner__nota-settimana">
-          I dati di Settimana {plan.week} non sono ancora stati caricati: questa vista
-          mostra ancora gli alimenti/target della Settimana 1.
-        </p>
-      )}
     </div>
   )
 }
