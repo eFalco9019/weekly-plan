@@ -251,3 +251,136 @@ body {
 .meal-section__ricetta-fonte a {
   color: #a66b2f;
 }
+
+/* ---------------------------------------------------------------- */
+/* Vista settimanale                                                 */
+/* ---------------------------------------------------------------- */
+
+.week-view {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.week-view__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.week-view__back {
+  border: none;
+  background: none;
+  color: #2b6b4f;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.week-view__nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.week-view__nav button {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.week-view__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.week-view__day {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e2ddd2;
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.week-view__day:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: #2b6b4f;
+}
+
+.week-view__day--today {
+  border-color: #2b6b4f;
+  border-width: 2px;
+}
+
+.week-view__day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.week-view__weekday {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.week-view__daynum {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.week-view__badges {
+  display: flex;
+  gap: 6px;
+}
+
+.week-view__badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eee;
+  color: #555;
+}
+
+.week-view__badge--on {
+  background: #e3f3ea;
+  color: #2b6b4f;
+}
+
+.week-view__badge--off {
+  background: #f3eee3;
+  color: #8a6b2f;
+}
+
+.week-view__cho {
+  font-size: 0.8rem;
+  color: #444;
+}
+
+.week-view__pranzo {
+  font-size: 0.78rem;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-view__nota {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: #888;
+}

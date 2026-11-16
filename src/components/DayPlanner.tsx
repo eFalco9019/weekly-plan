@@ -7,19 +7,19 @@ interface Props {
   profile: ProfileId
   date: string
   onDateChange: (date: string) => void
-  onChangeProfile: () => void
+  onBackToWeek: () => void
 }
 
 const meals: MealType[] = ['colazione', 'pranzo', 'spuntino', 'cena']
 
-export function DayPlanner({ profile, date, onDateChange, onChangeProfile }: Props) {
+export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props) {
   const plan = useDayPlan(profile, date)
 
   return (
     <div className="day-planner">
       <header className="day-planner__header">
-        <button className="day-planner__back" onClick={onChangeProfile}>
-          ← cambia profilo
+        <button className="day-planner__back" onClick={onBackToWeek}>
+          ← torna alla settimana
         </button>
         <div className="day-planner__controls">
           <input type="date" value={date} onChange={(e) => onDateChange(e.target.value)} />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { DayType, FoodEquivalent, MealType, ProfileId } from '../types'
+import type { DayType, FoodEquivalent, MealTemplate, MealType, ProfileId } from '../types'
 import { mealEquivalentsForWeek, templatesForWeek } from '../data/weekRegistry'
 import { recipes } from '../data/recipes'
 import { rebalanceDay, choTargetToGrams } from '../lib/macroEngine'
@@ -29,8 +29,47 @@ export type DayState = Record<MealType, MealState>
 
 const STORAGE_PREFIX = 'weekly-plan:dayplan:'
 
-function storageKey(profile: ProfileId, date: string) {
+export function storageKey(profile: ProfileId, date: string) {
   return `${STORAGE_PREFIX}${profile}:${date}`
+}
+
+/** Legge il piano salvato (se esiste) per un profilo/data, senza montare
+ * l'hook: usato dalla vista settimanale per mostrare un riepilogo di
+ * tutti i 7 giorni senza istanziare un useDayPlan per ciascuno. */
+export function loadDayPlan(
+  profile: ProfileId,
+  date: string,
+): { week: number; dayType: DayType; state: DayState } | null {
+  const raw = localStorage.getItem(storageKey(profile, date))
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as { week: number; dayType: DayType; state: DayState }
+  } catch {
+    return null
+  }
+}
+
+/** Totale CHO (effettivo vs target) di una giornata, dato lo stato dei
+ * pasti. Condiviso tra DayTotals (drill-down giornaliero) e WeekView
+ * (riepilogo settimanale). */
+export function calcDayChoTotals(
+  week: number,
+  dayType: DayType,
+  state: DayState,
+  templates: MealTemplate[],
+): { actual: number; target: number } {
+  let actual = 0
+  let target = 0
+  for (const meal of ['colazione', 'pranzo', 'cena', 'spuntino'] as MealType[]) {
+    const template = templates.find((t) => t.meal === meal)
+    const scelta = state[meal]?.scelte.carboidrati
+    if (!template || !scelta) continue
+    const density = carboDensity(week, meal, scelta)
+    if (density <= 0) continue
+    actual += (scelta.grammi * density) / 100
+    target += dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG
+  }
+  return { actual, target }
 }
 
 /** Alimenti disponibili per un pasto, nella settimana indicata. */
@@ -62,7 +101,7 @@ function defaultMealState(week: number, meal: MealType, dayType: DayType): MealS
   return { scelte }
 }
 
-function defaultDayState(week: number, dayType: DayType): DayState {
+export function defaultDayState(week: number, dayType: DayType): DayState {
   return {
     colazione: defaultMealState(week, 'colazione', dayType),
     pranzo: defaultMealState(week, 'pranzo', dayType),
