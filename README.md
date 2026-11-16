@@ -33,12 +33,12 @@ della Supabase CLI, con `supabase/config.toml`).
    production** attiva, le migrazioni vengono applicate al push su `main`.
    In alternativa: SQL editor del progetto → incolla
    `supabase/migrations/20261116142247_init_day_plans.sql` → Run.
-2. **Chiavi per l'app.** Dashboard → Project Settings → API (o "API
-   Keys"): copia il Project URL e la chiave pubblica (anon / publishable,
-   **non** la service role). Aggiungile come secrets del repository GitHub
-   (Settings → Secrets and variables → Actions → New repository secret):
-   `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. Poi rilancia il deploy.
-3. In sviluppo locale: `.env.local` con le stesse due variabili.
+2. **Chiavi per l'app.** URL del progetto e chiave **publishable**
+   (`sb_publishable_...`) sono in `.env.production`, letto dalla build. La
+   chiave publishable è fatta per stare nel codice del frontend: i dati sono
+   protetti dalle regole di accesso (RLS) e dai permessi della tabella. Non
+   mettere mai lì una chiave secret / service_role.
+3. In sviluppo locale `npm run dev` usa `.env.local` (stesse due variabili) se vuoi collegarti.
 
 Come funziona la sincronizzazione (`src/lib/sync.ts`):
 
@@ -52,7 +52,8 @@ Come funziona la sincronizzazione (`src/lib/sync.ts`):
   (sincronizzato, offline, solo su questo dispositivo).
 
 > Nota: non c'è ancora un login (selettore profilo, uso in famiglia): la
-> chiave pubblica può leggere e scrivere `day_plans` (non cancellare).
+> chiave pubblica può leggere, inserire e modificare `day_plans`, non
+> cancellare né svuotare la tabella.
 > Chiunque abbia URL e chiave dell'app potrebbe leggere i giorni del piano.
 > Il login per utente è previsto nella fase con la nutrizionista.
 
