@@ -3,6 +3,7 @@ import type { DayType, FoodEquivalent, MealTemplate, MealType, ProfileId } from 
 import { mealEquivalentsForWeek, templatesForWeek } from '../data/weekRegistry'
 import { recipes } from '../data/recipes'
 import { rebalanceDay, choTargetToGrams } from '../lib/macroEngine'
+import { rotationIndex, foodAlternatives } from '../lib/rotation'
 
 /**
  * Stato di un pasto per la giornata selezionata: alimento scelto per
@@ -69,7 +70,7 @@ export function saveDayPlan(profile: ProfileId, date: string, plan: StoredDayPla
 export function setDayTypeForDate(profile: ProfileId, date: string, dayType: DayType) {
   const saved = loadDayPlan(profile, date)
   const week = saved?.week ?? 1
-  const state = defaultDayState(week, dayType)
+  const state = defaultDayState(week, dayType, date)
   saveDayPlan(profile, date, { week, dayType, state, note: saved?.note })
 }
 
@@ -80,7 +81,7 @@ export function setNoteForDate(profile: ProfileId, date: string, note: string) {
   const saved = loadDayPlan(profile, date)
   const week = saved?.week ?? 1
   const dayType = saved?.dayType ?? 'ON'
-  const state = saved?.state ?? defaultDayState(week, dayType)
+  const state = saved?.state ?? defaultDayState(week, dayType, date)
   saveDayPlan(profile, date, { week, dayType, state, note })
 }
 
@@ -141,26 +142,72 @@ export function carboDensity(week: number, meal: MealType, scelta: MealChoice | 
   return found?.choPer100g ?? 0
 }
 
-function defaultMealState(week: number, meal: MealType, dayType: DayType): MealState {
+/** Categorie in cui lo stesso alimento non deve ripetersi tra i pasti
+ * della stessa giornata (es. riso, pollo o la stessa verdura a pranzo e a cena). */
+const noRepeatInDay = new Set(['carboidrati', 'proteine', 'verdura'])
+
+function defaultMealState(
+  week: number,
+  meal: MealType,
+  dayType: DayType,
+  date: string | undefined,
+  seed: number,
+  usedToday: Set<string>,
+): MealState {
   const groups = mealEquivalents(week, meal)
   const scelte: MealState['scelte'] = {}
   for (const [categoria, items] of Object.entries(groups)) {
-    const first = items[0]
-    if (!first) continue
+    if (items.length === 0) continue
+    let idx = date ? rotationIndex(date, `${meal}:${categoria}`, items.length, seed) : 0
+    if (date && noRepeatInDay.has(categoria)) {
+      const alreadyUsed = (alimento: string) => foodAlternatives(alimento).some((alt) => usedToday.has(alt))
+      for (let k = 0; k < items.length && alreadyUsed(items[idx].alimento); k++) {
+        idx = (idx + 1) % items.length
+      }
+      for (const alt of foodAlternatives(items[idx].alimento)) usedToday.add(alt)
+    }
+    const item = items[idx]
     scelte[categoria] = {
-      alimento: first.alimento,
-      grammi: dayType === 'ON' ? first.grammiOn : first.grammiOff,
+      alimento: item.alimento,
+      grammi: dayType === 'ON' ? item.grammiOn : item.grammiOff,
     }
   }
   return { scelte }
 }
 
-export function defaultDayState(week: number, dayType: DayType): DayState {
-  return {
-    colazione: defaultMealState(week, 'colazione', dayType),
-    pranzo: defaultMealState(week, 'pranzo', dayType),
-    cena: defaultMealState(week, 'cena', dayType),
-    spuntino: defaultMealState(week, 'spuntino', dayType),
+/**
+ * Scelte di default di una giornata. Con `date`, ogni categoria ruota tra
+ * gli alimenti equivalenti in base alla data (varietà tra i giorni, vedi
+ * src/lib/rotation.ts); senza `date`, prende il primo alimento di ogni
+ * tabella. `seed` sposta la rotazione su un'altra combinazione.
+ */
+export function defaultDayState(week: number, dayType: DayType, date?: string, seed = 0): DayState {
+  const usedToday = new Set<string>()
+  // Ordine della giornata: le scelte di colazione/pranzo condizionano la cena.
+  const colazione = defaultMealState(week, 'colazione', dayType, date, seed, usedToday)
+  const pranzo = defaultMealState(week, 'pranzo', dayType, date, seed, usedToday)
+  const cena = defaultMealState(week, 'cena', dayType, date, seed, usedToday)
+  const spuntino = defaultMealState(week, 'spuntino', dayType, date, seed, usedToday)
+  return { colazione, pranzo, cena, spuntino }
+}
+
+/**
+ * Rigenera il menu (nuove combinazioni) di una lista di date, mantenendo
+ * per ciascun giorno ON/OFF, settimana nutrizionale, nota e i pasti a cui
+ * è stata assegnata una ricetta. Usato dal pulsante della vista settimanale.
+ */
+export function regenerateMenu(profile: ProfileId, dates: string[], seed: number) {
+  for (const date of dates) {
+    const saved = loadDayPlan(profile, date)
+    const week = saved?.week ?? 1
+    const dayType = saved?.dayType ?? 'ON'
+    const state = defaultDayState(week, dayType, date, seed)
+    if (saved) {
+      for (const meal of Object.keys(state) as MealType[]) {
+        if (saved.state[meal]?.scelte.carboidrati?.recipeId) state[meal] = saved.state[meal]
+      }
+    }
+    saveDayPlan(profile, date, { week, dayType, state, note: saved?.note })
   }
 }
 
@@ -182,7 +229,7 @@ export function useDayPlan(profile: ProfileId, date: string) {
     } else {
       setWeekState(1)
       setDayType('ON')
-      setState(defaultDayState(1, 'ON'))
+      setState(defaultDayState(1, 'ON', date))
       setNote('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,12 +244,12 @@ export function useDayPlan(profile: ProfileId, date: string) {
 
   function setDayTypeAndReset(newType: DayType) {
     setDayType(newType)
-    setState(defaultDayState(week, newType))
+    setState(defaultDayState(week, newType, date))
   }
 
   function setWeek(newWeek: number) {
     setWeekState(newWeek)
-    setState(defaultDayState(newWeek, dayType))
+    setState(defaultDayState(newWeek, dayType, date))
   }
 
   function setAlimento(meal: MealType, categoria: string, alimento: string) {

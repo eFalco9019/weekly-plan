@@ -719,6 +719,33 @@ button {
   box-shadow: var(--shadow-card);
 }
 
+.week-view__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.week-view__shuffle {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.week-view__shuffle:hover {
+  border-color: var(--energia);
+}
+
+.week-view__feedback {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--energia);
+}
+
 .week-view__list {
   display: flex;
   flex-direction: column;

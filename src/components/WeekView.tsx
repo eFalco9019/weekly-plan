@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import type { DayType, ProfileId } from '../types'
 import { weekDates, formatDayMonth, toIso } from '../lib/dateUtils'
-import { loadDayPlan, defaultDayState, calcDayChoTotals, setDayTypeForDate, setNoteForDate } from '../hooks/useDayPlan'
+import {
+  loadDayPlan,
+  defaultDayState,
+  calcDayChoTotals,
+  setDayTypeForDate,
+  setNoteForDate,
+  regenerateMenu,
+} from '../hooks/useDayPlan'
 import { templatesForWeek } from '../data/weekRegistry'
 import { describeMeal } from '../lib/mealLabel'
 import { mealLabels, mealColor } from '../lib/meals'
@@ -34,9 +41,16 @@ export function WeekView({
   // Forza il ricalcolo dopo un cambio ON/OFF inline (i dati vivono in
   // localStorage, non in uno state React, quindi serve un re-render esplicito).
   const [, setTick] = useState(0)
+  const [shuffledWeek, setShuffledWeek] = useState<string | null>(null)
 
   function handleToggleDayType(date: string, dayType: DayType) {
     setDayTypeForDate(profile, date, dayType)
+    setTick((t) => t + 1)
+  }
+
+  function handleShuffleWeek() {
+    regenerateMenu(profile, dates, 1 + Math.floor(Math.random() * 10_000))
+    setShuffledWeek(dates[0])
     setTick((t) => t + 1)
   }
 
@@ -66,10 +80,20 @@ export function WeekView({
               ›
             </button>
           </div>
-          <button className="week-view__shopping" onClick={onOpenShoppingList}>
-            🛒 Lista della spesa
-          </button>
+          <div className="week-view__actions">
+            <button className="week-view__shuffle" onClick={handleShuffleWeek}>
+              🔀 Varia il menu
+            </button>
+            <button className="week-view__shopping" onClick={onOpenShoppingList}>
+              🛒 Lista della spesa
+            </button>
+          </div>
         </div>
+        {shuffledWeek === dates[0] && (
+          <p className="week-view__feedback" role="status">
+            Menu della settimana rigenerato. ON/OFF, note e ricette assegnate restano come prima.
+          </p>
+        )}
       </header>
 
       <div className="week-view__list">
@@ -77,7 +101,7 @@ export function WeekView({
           const saved = loadDayPlan(profile, date)
           const week = saved?.week ?? 1
           const dayType = saved?.dayType ?? 'ON'
-          const state = saved?.state ?? defaultDayState(week, dayType)
+          const state = saved?.state ?? defaultDayState(week, dayType, date)
           const templates = templatesForWeek(week)
           const { actual, target } = calcDayChoTotals(week, dayType, state, templates)
           const isToday = date === todayIso
