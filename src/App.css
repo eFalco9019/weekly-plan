@@ -1,0 +1,190 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #f5f5f0;
+  color: #1a1a1a;
+}
+
+.profile-selector {
+  max-width: 480px;
+  margin: 15vh auto;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.profile-selector__options {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.profile-selector__options button {
+  font-size: 1.1rem;
+  padding: 16px 32px;
+  border: 2px solid #2b6b4f;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+}
+
+.profile-selector__options button:hover {
+  background: #2b6b4f;
+  color: white;
+}
+
+.day-planner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.day-planner__header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.day-planner__back {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #2b6b4f;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0;
+}
+
+.day-planner__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.day-planner__daytype {
+  display: flex;
+  gap: 4px;
+}
+
+.day-planner__daytype button {
+  padding: 6px 16px;
+  border: 1px solid #2b6b4f;
+  background: white;
+  cursor: pointer;
+}
+
+.day-planner__daytype button.active {
+  background: #2b6b4f;
+  color: white;
+}
+
+.day-planner__nota-settimana {
+  background: #fff3cd;
+  border: 1px solid #ffe69c;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.day-totals {
+  background: white;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+}
+
+.day-totals__over {
+  color: #b35900;
+}
+
+.day-totals__under {
+  color: #1a6ab3;
+}
+
+.day-planner__meals {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.meal-section {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #ddd;
+}
+
+.meal-section header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.meal-section header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.meal-section__target {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.meal-section__categoria {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.meal-section__categoria label {
+  width: 110px;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.meal-section__categoria select {
+  flex: 1;
+  min-width: 180px;
+  padding: 6px;
+}
+
+.meal-section__grammi {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meal-section__grammi input {
+  width: 70px;
+  padding: 4px;
+}
+
+.meal-section__grammi-fisse {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.meal-section__blocco {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #666;
+  margin-left: 8px;
+}
+
+.meal-section__nota {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 8px 0 0;
+}
