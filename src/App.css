@@ -259,6 +259,115 @@ button {
 }
 
 /* ------------------------------------------------------------------ */
+/* Macro chart — ripartizione CHO / proteine / grassi per pasto        */
+/* ------------------------------------------------------------------ */
+
+.day-planner__macros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.macro-chart {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.macro-chart__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.macro-chart__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.macro-chart__bars {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.macro-chart__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.macro-chart__track {
+  position: relative;
+  width: 100%;
+  max-width: 34px;
+  border-radius: var(--radius-sm);
+  background: rgba(35, 39, 31, 0.06);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.macro-chart__fill {
+  width: 100%;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: height 0.2s ease;
+}
+
+.macro-chart__fill--target-only {
+  opacity: 0.45;
+}
+
+.macro-chart__target-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.35;
+}
+
+.macro-chart__value {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.macro-chart__unit {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+  margin-left: 1px;
+}
+
+.macro-chart__label {
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.macro-chart__note {
+  margin: 12px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .day-planner__macros {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Day totals — card eroe con gauge circolare                          */
 /* ------------------------------------------------------------------ */
 

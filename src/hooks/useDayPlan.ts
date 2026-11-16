@@ -107,6 +107,25 @@ export function calcDayChoTotals(
   return { actual, target }
 }
 
+/** Come calcDayChoTotals, ma pasto per pasto — usato dal grafico "CHO
+ * per pasto" nel drill-down giornaliero. */
+export function calcMealChoBreakdown(
+  week: number,
+  dayType: DayType,
+  state: DayState,
+  templates: MealTemplate[],
+): { meal: MealType; actual: number; target: number }[] {
+  const meals: MealType[] = ['colazione', 'pranzo', 'cena', 'spuntino']
+  return meals.map((meal) => {
+    const template = templates.find((t) => t.meal === meal)
+    const scelta = state[meal]?.scelte.carboidrati
+    const density = scelta ? carboDensity(week, meal, scelta) : 0
+    const actual = density > 0 && scelta ? (scelta.grammi * density) / 100 : 0
+    const target = template ? (dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG) : 0
+    return { meal, actual, target }
+  })
+}
+
 /** Alimenti disponibili per un pasto, nella settimana indicata. */
 export function mealEquivalents(week: number, meal: MealType) {
   return mealEquivalentsForWeek(week, meal)

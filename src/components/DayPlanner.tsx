@@ -1,8 +1,10 @@
 import type { ProfileId, MealType } from '../types'
-import { useDayPlan } from '../hooks/useDayPlan'
+import { useDayPlan, calcMealChoBreakdown } from '../hooks/useDayPlan'
 import { profiles } from '../data/profiles'
 import { MealSection } from './MealSection'
 import { DayTotals } from './DayTotals'
+import { MacroChart, type MacroChartBar } from './MacroChart'
+import { splitFixedMacroByMeal, type MealMacroShare } from '../lib/macroBreakdown'
 
 interface Props {
   profile: ProfileId
@@ -12,6 +14,10 @@ interface Props {
 }
 
 const meals: MealType[] = ['colazione', 'pranzo', 'spuntino', 'cena']
+
+function toBars(shares: MealMacroShare[]): MacroChartBar[] {
+  return shares.map((s) => ({ meal: s.meal, target: s.targetG }))
+}
 
 export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props) {
   const plan = useDayPlan(profile, date)
@@ -75,6 +81,29 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
           onChange={(e) => plan.setNote(e.target.value)}
         />
       </label>
+
+      <div className="day-planner__macros">
+        <MacroChart
+          title="Carboidrati"
+          icon="🌾"
+          color="var(--carb)"
+          bars={calcMealChoBreakdown(plan.week, plan.dayType, plan.state, plan.templates)}
+        />
+        <MacroChart
+          title="Proteine"
+          icon="🥚"
+          color="var(--protein)"
+          bars={toBars(splitFixedMacroByMeal(profileData?.proteineGFisse ?? 0, plan.templates, 'targetProteinG'))}
+          note="Stima: il pranzo usa il target del piano, gli altri pasti dividono in parti uguali il resto del totale fisso giornaliero — da confermare con Ezio se la suddivisione reale è diversa."
+        />
+        <MacroChart
+          title="Grassi"
+          icon="🫒"
+          color="var(--fat)"
+          bars={toBars(splitFixedMacroByMeal(profileData?.grassiGFissi ?? 0, plan.templates, 'targetFatG'))}
+          note="Stima: il pranzo usa il target del piano, gli altri pasti dividono in parti uguali il resto del totale fisso giornaliero — da confermare con Ezio se la suddivisione reale è diversa."
+        />
+      </div>
 
       <div className="day-planner__meals">
         {meals.map((meal) => (
