@@ -23,6 +23,13 @@
   --verdura: #5c8a52; /* verdure / frutta */
   --verdura-soft: #eaf1e6;
 
+  /* Colori dei pasti: tinte pastello (riferimento anello "health score"),
+     condivise da anelli macro, legenda e bordo delle card pasto. */
+  --meal-colazione: #f2d06b;
+  --meal-pranzo: #9fb06c;
+  --meal-spuntino: #f0b3cd;
+  --meal-cena: #a9c0ea;
+
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -140,6 +147,8 @@ button {
 /* ------------------------------------------------------------------ */
 
 .day-planner {
+  width: 100%;
+  min-width: 0;
   max-width: 540px;
   margin: 0 auto;
   padding: 20px 20px 48px;
@@ -259,125 +268,13 @@ button {
 }
 
 /* ------------------------------------------------------------------ */
-/* Macro chart — ripartizione CHO / proteine / grassi per pasto        */
-/* ------------------------------------------------------------------ */
-
-.day-planner__macros {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.macro-chart {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 16px 14px;
-  box-shadow: var(--shadow-card);
-}
-
-.macro-chart__title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  color: var(--ink);
-  margin-bottom: 14px;
-}
-
-.macro-chart__icon {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.macro-chart__bars {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.macro-chart__col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.macro-chart__track {
-  position: relative;
-  width: 100%;
-  max-width: 34px;
-  border-radius: var(--radius-sm);
-  background: rgba(35, 39, 31, 0.06);
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-}
-
-.macro-chart__fill {
-  width: 100%;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  transition: height 0.2s ease;
-}
-
-.macro-chart__fill--target-only {
-  opacity: 0.45;
-}
-
-.macro-chart__target-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--ink);
-  opacity: 0.35;
-}
-
-.macro-chart__value {
-  margin-top: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.macro-chart__unit {
-  font-size: 0.7rem;
-  font-weight: 400;
-  color: var(--ink-soft);
-  margin-left: 1px;
-}
-
-.macro-chart__label {
-  margin-top: 2px;
-  font-size: 0.72rem;
-  color: var(--ink-soft);
-}
-
-.macro-chart__note {
-  margin: 12px 0 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: var(--ink-soft);
-}
-
-@media (max-width: 720px) {
-  .day-planner__macros {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Day totals — card eroe con gauge circolare                          */
+/* Day totals — card eroe: un anello per macro, segmenti per pasto     */
 /* ------------------------------------------------------------------ */
 
 .day-totals {
-  display: flex;
-  align-items: center;
-  gap: 20px;
   background: var(--energia-soft);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 20px 18px 16px;
   margin-bottom: 20px;
   box-shadow: var(--shadow-card);
 }
@@ -386,48 +283,16 @@ button {
   background: var(--recupero-soft);
 }
 
-.gauge {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.gauge svg {
-  position: absolute;
-  inset: 0;
-}
-
-.gauge__content {
-  position: absolute;
-  inset: 0;
+.day-totals__head {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.day-totals__value {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  line-height: 1;
-  color: var(--ink);
-}
-
-.day-totals__unit {
-  font-size: 0.72rem;
-  color: var(--ink-soft);
-  margin-top: 2px;
-}
-
-.day-totals__info {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+  gap: 2px;
+  margin-bottom: 14px;
 }
 
 .day-totals__label {
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
   color: var(--ink);
 }
 
@@ -436,38 +301,136 @@ button {
   color: var(--ink-soft);
 }
 
-.day-totals__macros {
-  display: flex;
-  gap: 14px;
-  margin-top: 6px;
-  flex-wrap: wrap;
+.day-totals__rings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.day-totals__macro {
+.day-totals__ring {
+  margin: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
-  color: var(--ink-soft);
+  min-width: 0;
 }
 
-.day-totals__macro strong {
+.day-totals__ring figcaption {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ring {
+  position: relative;
+  width: 100%;
+  max-width: 150px;
+  aspect-ratio: 1;
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ring__track {
+  stroke: rgba(35, 39, 31, 0.07);
+}
+
+.ring__segment {
+  transition: stroke-dasharray 0.3s ease, stroke-dashoffset 0.3s ease;
+}
+
+.ring__badge circle {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.ring__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.day-totals__value {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 6vw, 1.9rem);
+  line-height: 1;
+  color: var(--ink);
+}
+
+.day-totals__unit {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+
+.day-totals__table {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-totals__table th,
+.day-totals__table td {
+  padding: 7px 4px;
+  border-top: 1px solid rgba(35, 39, 31, 0.08);
+}
+
+.day-totals__table thead th {
+  border-top: none;
+  padding-top: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+.day-totals__table tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.day-totals__table td {
+  text-align: right;
   color: var(--ink);
 }
 
 .day-totals__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
   display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -1px;
 }
 
-.day-totals__dot--protein {
-  background: var(--protein);
+.day-totals__note {
+  margin: 10px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
 }
 
-.day-totals__dot--fat {
-  background: var(--fat);
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* ------------------------------------------------------------------ */
@@ -489,19 +452,19 @@ button {
 }
 
 .meal-section--colazione {
-  border-left-color: var(--fat);
+  border-left-color: var(--meal-colazione);
 }
 
 .meal-section--pranzo {
-  border-left-color: var(--energia);
+  border-left-color: var(--meal-pranzo);
 }
 
 .meal-section--spuntino {
-  border-left-color: var(--carb);
+  border-left-color: var(--meal-spuntino);
 }
 
 .meal-section--cena {
-  border-left-color: var(--protein);
+  border-left-color: var(--meal-cena);
 }
 
 .meal-section header {
@@ -565,8 +528,10 @@ button {
 
 .meal-section__grammi {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .meal-section__grammi input {
@@ -593,6 +558,8 @@ button {
   color: var(--ink-soft);
   margin-left: 6px;
   width: auto !important;
+  min-width: 0;
+  text-align: left;
 }
 
 .meal-section__blocco input {
@@ -770,9 +737,7 @@ button {
 }
 
 .week-view__day-main {
-  display: flex;
-  align-items: stretch;
-  gap: 14px;
+  position: relative;
 }
 
 .week-view__day:hover {
@@ -802,16 +767,18 @@ button {
   border: none;
   font-family: inherit;
   cursor: pointer;
-  padding: 14px 10px 14px 16px;
+  padding: 14px 16px 14px 16px;
+  width: 100%;
   min-width: 0;
 }
 
 .week-view__day-head {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+  padding-right: 120px; /* spazio per lo switch ON/OFF in alto a destra */
 }
 
 .week-view__weekday {
@@ -850,12 +817,37 @@ button {
   font-weight: 500;
 }
 
-.week-view__pranzo {
+.week-view__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 4px 0 2px;
+}
+
+.week-view__menu-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
   font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.week-view__menu-meal {
   color: var(--ink-soft);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.week-view__menu-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+}
+
+.week-view__menu-dish {
+  color: var(--ink);
 }
 
 .week-view__open-hint {
@@ -865,16 +857,14 @@ button {
 }
 
 .week-view__day-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   background: var(--paper);
   border-radius: 999px;
   padding: 3px;
   gap: 2px;
-  margin: 14px 14px 14px 0;
-  flex-shrink: 0;
-  align-self: center;
 }
 
 .week-view__day-toggle button {

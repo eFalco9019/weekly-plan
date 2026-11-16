@@ -3,20 +3,7 @@ import type { DayType, MealTemplate, MealType } from '../types'
 import { mealEquivalents } from '../hooks/useDayPlan'
 import { recipes } from '../data/recipes'
 import { recipesForMeal, scaleRecipeToMeal } from '../lib/recipeEngine'
-
-const mealLabels: Record<MealType, string> = {
-  colazione: 'Colazione',
-  pranzo: 'Pranzo',
-  spuntino: 'Spuntino',
-  cena: 'Cena',
-}
-
-const mealIcons: Record<MealType, string> = {
-  colazione: '🌅',
-  pranzo: '🍝',
-  spuntino: '🍎',
-  cena: '🍽️',
-}
+import { mealLabels, mealIcons } from '../lib/meals'
 
 const categoriaLabels: Record<string, string> = {
   carboidrati: 'Carboidrati',

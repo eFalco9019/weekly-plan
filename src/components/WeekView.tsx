@@ -3,7 +3,12 @@ import type { DayType, ProfileId } from '../types'
 import { weekDates, formatDayMonth, toIso } from '../lib/dateUtils'
 import { loadDayPlan, defaultDayState, calcDayChoTotals, setDayTypeForDate, setNoteForDate } from '../hooks/useDayPlan'
 import { templatesForWeek } from '../data/weekRegistry'
-import { recipes } from '../data/recipes'
+import { describeMeal } from '../lib/mealLabel'
+import { mealLabels, mealColor } from '../lib/meals'
+import type { MealType } from '../types'
+
+/** Pasti principali mostrati nella card del giorno (lo spuntino resta nel dettaglio). */
+const mainMeals: MealType[] = ['colazione', 'pranzo', 'cena']
 
 interface Props {
   profile: ProfileId
@@ -75,10 +80,6 @@ export function WeekView({
           const state = saved?.state ?? defaultDayState(week, dayType)
           const templates = templatesForWeek(week)
           const { actual, target } = calcDayChoTotals(week, dayType, state, templates)
-          const pranzoScelta = state.pranzo?.scelte.carboidrati
-          const pranzoLabel = pranzoScelta?.recipeId
-            ? recipes.find((r) => r.id === pranzoScelta.recipeId)?.nome
-            : pranzoScelta?.alimento
           const isToday = date === todayIso
 
           return (
@@ -104,7 +105,21 @@ export function WeekView({
                     <strong>{Math.round(actual * 10) / 10}</strong> / {Math.round(target * 10) / 10} g CHO ·
                     Sett. {week}
                   </div>
-                  {pranzoLabel && <div className="week-view__pranzo">🍝 {pranzoLabel}</div>}
+                  <span className="week-view__menu">
+                    {mainMeals.map((meal) => {
+                      const dish = describeMeal(meal, state[meal])
+                      if (!dish) return null
+                      return (
+                        <span key={meal} className="week-view__menu-row">
+                          <span className="week-view__menu-meal">
+                            <i className="week-view__menu-dot" style={{ background: mealColor(meal) }} />
+                            {mealLabels[meal]}
+                          </span>
+                          <span className="week-view__menu-dish">{dish}</span>
+                        </span>
+                      )
+                    })}
+                  </span>
                   <span className="week-view__open-hint">apri il dettaglio →</span>
                 </button>
 

@@ -5,8 +5,14 @@ export function parseIso(iso: string): Date {
   return new Date(`${iso}T00:00:00`)
 }
 
+/** Data locale in formato YYYY-MM-DD. Non usa toISOString(), che converte
+ * in UTC: in Italia (UTC+1/+2) la mezzanotte locale diventa il giorno
+ * prima e ogni addDays perdeva un giorno. */
 export function toIso(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 export function addDays(iso: string, days: number): string {
