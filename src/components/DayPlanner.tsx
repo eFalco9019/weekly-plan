@@ -1,5 +1,6 @@
 import type { ProfileId, MealType } from '../types'
 import { useDayPlan } from '../hooks/useDayPlan'
+import { profiles } from '../data/profiles'
 import { MealSection } from './MealSection'
 import { DayTotals } from './DayTotals'
 
@@ -14,6 +15,7 @@ const meals: MealType[] = ['colazione', 'pranzo', 'spuntino', 'cena']
 
 export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props) {
   const plan = useDayPlan(profile, date)
+  const profileData = profiles.find((p) => p.id === profile)
 
   return (
     <div className="day-planner">
@@ -22,9 +24,14 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
           ← torna alla settimana
         </button>
         <div className="day-planner__controls">
-          <input type="date" value={date} onChange={(e) => onDateChange(e.target.value)} />
-          <label>
-            Settimana
+          <input
+            className="day-planner__date"
+            type="date"
+            value={date}
+            onChange={(e) => onDateChange(e.target.value)}
+          />
+          <label className="day-planner__week">
+            Sett.
             <select value={plan.week} onChange={(e) => plan.setWeek(Number(e.target.value))}>
               {[1, 2, 3, 4].map((w) => (
                 <option key={w} value={w}>
@@ -35,13 +42,13 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
           </label>
           <div className="day-planner__daytype">
             <button
-              className={plan.dayType === 'ON' ? 'active' : ''}
+              className={plan.dayType === 'ON' ? 'active active--on' : ''}
               onClick={() => plan.setDayType('ON')}
             >
               ON
             </button>
             <button
-              className={plan.dayType === 'OFF' ? 'active' : ''}
+              className={plan.dayType === 'OFF' ? 'active active--off' : ''}
               onClick={() => plan.setDayType('OFF')}
             >
               OFF
@@ -50,7 +57,14 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
         </div>
       </header>
 
-      <DayTotals state={plan.state} templates={plan.templates} dayType={plan.dayType} week={plan.week} />
+      <DayTotals
+        state={plan.state}
+        templates={plan.templates}
+        dayType={plan.dayType}
+        week={plan.week}
+        proteinG={profileData?.proteineGFisse}
+        fatG={profileData?.grassiGFissi}
+      />
 
       <div className="day-planner__meals">
         {meals.map((meal) => (

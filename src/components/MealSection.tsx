@@ -11,6 +11,13 @@ const mealLabels: Record<MealType, string> = {
   cena: 'Cena',
 }
 
+const mealIcons: Record<MealType, string> = {
+  colazione: '🌅',
+  pranzo: '🍝',
+  spuntino: '🍎',
+  cena: '🍽️',
+}
+
 const categoriaLabels: Record<string, string> = {
   carboidrati: 'Carboidrati',
   proteine: 'Proteine',
@@ -63,11 +70,16 @@ export function MealSection({
       : []
 
   return (
-    <section className="meal-section">
+    <section className={`meal-section meal-section--${meal}`}>
       <header>
-        <h2>{mealLabels[meal]}</h2>
+        <h2>
+          <span className="meal-section__icon" aria-hidden="true">
+            {mealIcons[meal]}
+          </span>
+          {mealLabels[meal]}
+        </h2>
         {targetCho !== undefined && targetCho > 0 && (
-          <span className="meal-section__target">target {targetCho} g CHO</span>
+          <span className="meal-section__target">{targetCho} g CHO</span>
         )}
       </header>
 

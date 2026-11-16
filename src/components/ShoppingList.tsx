@@ -70,8 +70,11 @@ export function ShoppingList({ anchorDate, onBack }: Props) {
         <p>Nessun ingrediente trovato per questa settimana.</p>
       ) : (
         grouped.map((group) => (
-          <section className="shopping-list__group" key={group.categoria}>
-            <h2>{categoriaLabel(group.categoria)}</h2>
+          <section className="shopping-list__group" data-categoria={group.categoria} key={group.categoria}>
+            <h2>
+              <i className="shopping-list__dot" aria-hidden="true" />
+              {categoriaLabel(group.categoria)}
+            </h2>
             <ul>
               {group.items.map((item) => {
                 const key = `${group.categoria}__${item.nome}`

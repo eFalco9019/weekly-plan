@@ -1,141 +1,403 @@
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                       */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --paper: #f6f1e7;
+  --surface: #ffffff;
+  --ink: #23271f;
+  --ink-soft: #6f6656;
+  --line: #e7e0d0;
+
+  --energia: #2f6b4a; /* giorno ON / allenamento */
+  --energia-soft: #e3ede1;
+  --recupero: #a8672f; /* giorno OFF / recupero */
+  --recupero-soft: #f1e6d8;
+
+  --carb: #d9607e; /* carboidrati */
+  --carb-soft: #faeaee;
+  --fat: #e3a23b; /* grassi */
+  --fat-soft: #fbf0dc;
+  --protein: #3e7fa6; /* proteine */
+  --protein-soft: #e6eff4;
+  --verdura: #5c8a52; /* verdure / frutta */
+  --verdura-soft: #eaf1e6;
+
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-card: 0 1px 2px rgba(35, 39, 31, 0.04), 0 8px 20px rgba(35, 39, 31, 0.06);
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background: #f5f5f0;
-  color: #1a1a1a;
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
 }
 
+h1,
+h2 {
+  font-family: var(--font-display);
+  color: var(--ink);
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+button {
+  font: inherit;
+}
+
+/* ------------------------------------------------------------------ */
+/* Selettore profilo                                                   */
+/* ------------------------------------------------------------------ */
+
 .profile-selector {
-  max-width: 480px;
-  margin: 15vh auto;
-  text-align: center;
-  padding: 0 24px;
+  max-width: 440px;
+  margin: 0 auto;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 28px;
+}
+
+.profile-selector__kicker {
+  font-size: 0.8rem;
+  color: var(--energia);
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.profile-selector h1 {
+  font-size: 2.3rem;
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 0 0 16px;
+}
+
+.profile-selector p {
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  margin: 0 0 28px;
 }
 
 .profile-selector__options {
   display: flex;
-  gap: 16px;
-  justify-content: center;
-  margin-top: 24px;
+  gap: 12px;
 }
 
 .profile-selector__options button {
-  font-size: 1.1rem;
-  padding: 16px 32px;
-  border: 2px solid #2b6b4f;
-  border-radius: 12px;
-  background: white;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s, transform 0.1s;
 }
 
 .profile-selector__options button:hover {
-  background: #2b6b4f;
-  color: white;
+  border-color: var(--energia);
+  transform: translateY(-1px);
 }
 
+.profile-selector__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--energia);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Day planner                                                         */
+/* ------------------------------------------------------------------ */
+
 .day-planner {
-  max-width: 720px;
+  max-width: 540px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 20px 20px 48px;
 }
 
 .day-planner__header {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
-.day-planner__back {
+.day-planner__back,
+.week-view__back,
+.shopping-list__back {
   align-self: flex-start;
   background: none;
   border: none;
-  color: #2b6b4f;
+  color: var(--ink-soft);
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   padding: 0;
+}
+
+.day-planner__back:hover,
+.week-view__back:hover,
+.shopping-list__back:hover {
+  color: var(--energia);
 }
 
 .day-planner__controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 10px;
   align-items: center;
+}
+
+.day-planner__date {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.day-planner__week {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+
+.day-planner__week select {
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  color: var(--ink);
 }
 
 .day-planner__daytype {
   display: flex;
-  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
 }
 
 .day-planner__daytype button {
   padding: 6px 16px;
-  border: 1px solid #2b6b4f;
-  background: white;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
 }
 
-.day-planner__daytype button.active {
-  background: #2b6b4f;
-  color: white;
+.day-planner__daytype button.active--on {
+  background: var(--energia);
+  color: #fff;
 }
 
-.day-planner__nota-settimana {
-  background: #fff3cd;
-  border: 1px solid #ffe69c;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+.day-planner__daytype button.active--off {
+  background: var(--recupero);
+  color: #fff;
 }
+
+/* ------------------------------------------------------------------ */
+/* Day totals — card eroe con gauge circolare                          */
+/* ------------------------------------------------------------------ */
 
 .day-totals {
-  background: white;
-  border-radius: 10px;
-  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--energia-soft);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid #ddd;
+  box-shadow: var(--shadow-card);
 }
 
-.day-totals__over {
-  color: #b35900;
+.day-totals--off {
+  background: var(--recupero-soft);
 }
 
-.day-totals__under {
-  color: #1a6ab3;
+.gauge {
+  position: relative;
+  flex-shrink: 0;
 }
+
+.gauge svg {
+  position: absolute;
+  inset: 0;
+}
+
+.gauge__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-totals__value {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.day-totals__unit {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.day-totals__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.day-totals__label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.day-totals__sub {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.day-totals__macros {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.day-totals__macro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.day-totals__macro strong {
+  color: var(--ink);
+}
+
+.day-totals__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.day-totals__dot--protein {
+  background: var(--protein);
+}
+
+.day-totals__dot--fat {
+  background: var(--fat);
+}
+
+/* ------------------------------------------------------------------ */
+/* Meal sections                                                       */
+/* ------------------------------------------------------------------ */
 
 .day-planner__meals {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .meal-section {
-  background: white;
-  border-radius: 10px;
-  padding: 16px;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+  border-left: 4px solid var(--line);
+}
+
+.meal-section--colazione {
+  border-left-color: var(--fat);
+}
+
+.meal-section--pranzo {
+  border-left-color: var(--energia);
+}
+
+.meal-section--spuntino {
+  border-left-color: var(--carb);
+}
+
+.meal-section--cena {
+  border-left-color: var(--protein);
 }
 
 .meal-section header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 12px;
+  align-items: center;
+  margin-bottom: 14px;
 }
 
 .meal-section header h2 {
   margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meal-section__icon {
   font-size: 1.1rem;
 }
 
 .meal-section__target {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  background: var(--paper);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .meal-section__categoria {
@@ -143,19 +405,29 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.meal-section__categoria:last-of-type {
+  border-bottom: none;
 }
 
 .meal-section__categoria label {
-  width: 110px;
-  font-size: 0.9rem;
-  color: #444;
+  width: 100px;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
 }
 
 .meal-section__categoria select {
   flex: 1;
-  min-width: 180px;
-  padding: 6px;
+  min-width: 160px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .meal-section__grammi {
@@ -165,166 +437,225 @@ body {
 }
 
 .meal-section__grammi input {
-  width: 70px;
-  padding: 4px;
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .meal-section__grammi-fisse {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--ink-soft);
+  min-width: 48px;
+  text-align: right;
 }
 
 .meal-section__blocco {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.8rem;
-  color: #666;
-  margin-left: 8px;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  margin-left: 6px;
+  width: auto !important;
+}
+
+.meal-section__blocco input {
+  accent-color: var(--energia);
 }
 
 .meal-section__nota {
-  font-size: 0.8rem;
-  color: #888;
-  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin: 12px 0 0;
+  line-height: 1.4;
 }
 
 .meal-section__ricetta {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .meal-section__ricetta-picker {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: #555;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
 }
 
 .meal-section__ricetta-picker select {
-  padding: 6px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 .meal-section__ricetta-card {
-  background: #fff8ec;
-  border: 1px solid #f0d9a6;
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: var(--carb-soft);
+  border-radius: var(--radius-md);
+  padding: 14px;
 }
 
 .meal-section__ricetta-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.meal-section__ricetta-header strong {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.02rem;
 }
 
 .meal-section__ricetta-header button {
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  font-size: 0.74rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--carb);
   background: #fff;
+  color: var(--carb);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .meal-section__ricetta-ingredienti {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   padding-left: 18px;
   font-size: 0.85rem;
+  color: var(--ink);
 }
 
 .meal-section__ricetta-prep {
-  font-size: 0.8rem;
-  color: #555;
-  margin: 0 0 6px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+  line-height: 1.45;
 }
 
 .meal-section__ricetta-fonte {
-  font-size: 0.75rem;
-  color: #888;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
   margin: 0;
 }
 
 .meal-section__ricetta-fonte a {
-  color: #a66b2f;
+  color: var(--recupero);
 }
 
-/* ---------------------------------------------------------------- */
-/* Vista settimanale                                                 */
-/* ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Vista settimanale                                                   */
+/* ------------------------------------------------------------------ */
 
 .week-view {
-  max-width: 960px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 24px 20px 48px;
 }
 
 .week-view__header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.week-view__heading h1 {
+  font-size: 1.7rem;
+  font-weight: 500;
+  margin: 4px 0 0;
+}
+
+.week-view__toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 16px;
-}
-
-.week-view__back {
-  border: none;
-  background: none;
-  color: #2b6b4f;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 0;
 }
 
 .week-view__nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 6px 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.week-view__nav strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  min-width: 84px;
+  text-align: center;
 }
 
 .week-view__nav button {
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
+  border: none;
+  background: var(--paper);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
   font-size: 1rem;
   cursor: pointer;
+  color: var(--ink);
+}
+
+.week-view__shopping {
+  border: none;
+  background: var(--energia);
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
 }
 
 .week-view__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .week-view__day {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 8px;
   text-align: left;
-  background: #fff;
-  border: 1px solid #e2ddd2;
-  border-radius: 10px;
-  padding: 10px;
+  background: var(--surface);
+  border-left: 4px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
   cursor: pointer;
   font-family: inherit;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.12s;
 }
 
 .week-view__day:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-color: #2b6b4f;
+  transform: translateY(-2px);
+}
+
+.week-view__day--on {
+  border-left-color: var(--energia);
+}
+
+.week-view__day--off {
+  border-left-color: var(--recupero);
 }
 
 .week-view__day--today {
-  border-color: #2b6b4f;
-  border-width: 2px;
+  outline: 2px solid var(--ink);
+  outline-offset: -1px;
 }
 
 .week-view__day-head {
@@ -334,13 +665,14 @@ body {
 }
 
 .week-view__weekday {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.05rem;
 }
 
 .week-view__daynum {
-  font-size: 0.8rem;
-  color: #777;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
 }
 
 .week-view__badges {
@@ -349,93 +681,114 @@ body {
 }
 
 .week-view__badge {
-  font-size: 0.7rem;
-  padding: 2px 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 8px;
   border-radius: 999px;
-  background: #eee;
-  color: #555;
+  background: var(--paper);
+  color: var(--ink-soft);
 }
 
 .week-view__badge--on {
-  background: #e3f3ea;
-  color: #2b6b4f;
+  background: var(--energia-soft);
+  color: var(--energia);
 }
 
 .week-view__badge--off {
-  background: #f3eee3;
-  color: #8a6b2f;
+  background: var(--recupero-soft);
+  color: var(--recupero);
 }
 
 .week-view__cho {
   font-size: 0.8rem;
-  color: #444;
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .week-view__pranzo {
   font-size: 0.78rem;
-  color: #666;
+  color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .week-view__nota {
-  margin-top: 14px;
+  margin-top: 18px;
   font-size: 0.8rem;
-  color: #888;
+  color: var(--ink-soft);
 }
 
-.week-view__shopping {
-  border: 1px solid #2b6b4f;
-  background: #2b6b4f;
-  color: #fff;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-/* ---------------------------------------------------------------- */
-/* Lista della spesa                                                  */
-/* ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Lista della spesa                                                   */
+/* ------------------------------------------------------------------ */
 
 .shopping-list {
   max-width: 640px;
   margin: 0 auto;
-  padding: 16px;
-}
-
-.shopping-list__back {
-  border: none;
-  background: none;
-  color: #2b6b4f;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 10px;
+  padding: 24px 20px 48px;
 }
 
 .shopping-list__header h1 {
-  font-size: 1.3rem;
-  margin: 0 0 6px;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 10px 0 6px;
 }
 
 .shopping-list__nota {
-  font-size: 0.8rem;
-  color: #777;
-  margin: 0 0 20px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0 0 22px;
+  line-height: 1.5;
 }
 
 .shopping-list__group {
-  margin-bottom: 18px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-card);
 }
 
 .shopping-list__group h2 {
-  font-size: 1rem;
-  color: #2b6b4f;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
   margin: 0 0 8px;
-  border-bottom: 1px solid #e2ddd2;
-  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shopping-list__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.shopping-list__group[data-categoria='carboidrati'] .shopping-list__dot {
+  background: var(--carb);
+}
+
+.shopping-list__group[data-categoria='proteine'] .shopping-list__dot {
+  background: var(--protein);
+}
+
+.shopping-list__group[data-categoria='grassi'] .shopping-list__dot {
+  background: var(--fat);
+}
+
+.shopping-list__group[data-categoria='ricetta'] .shopping-list__dot {
+  background: var(--energia);
+}
+
+.shopping-list__group[data-categoria='frutta'] .shopping-list__dot,
+.shopping-list__group[data-categoria='verdura'] .shopping-list__dot,
+.shopping-list__group[data-categoria='fruttaGrassi'] .shopping-list__dot {
+  background: var(--verdura);
 }
 
 .shopping-list__group ul {
@@ -445,8 +798,12 @@ body {
 }
 
 .shopping-list__group li {
-  padding: 6px 0;
-  border-bottom: 1px solid #f0ece0;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.shopping-list__group li:last-child {
+  border-bottom: none;
 }
 
 .shopping-list__group li label {
@@ -456,17 +813,25 @@ body {
   cursor: pointer;
 }
 
+.shopping-list__group li input[type='checkbox'] {
+  accent-color: var(--energia);
+  width: 16px;
+  height: 16px;
+}
+
 .shopping-list__nome {
   flex: 1;
+  font-size: 0.92rem;
 }
 
 .shopping-list__grammi {
-  color: #666;
+  color: var(--ink-soft);
   font-size: 0.85rem;
 }
 
 .shopping-list__item--checked .shopping-list__nome,
 .shopping-list__item--checked .shopping-list__grammi {
   text-decoration: line-through;
-  color: #aaa;
+  color: var(--ink-soft);
+  opacity: 0.6;
 }

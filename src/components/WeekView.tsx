@@ -29,23 +29,28 @@ export function WeekView({
   return (
     <div className="week-view">
       <header className="week-view__header">
-        <button className="week-view__back" onClick={onChangeProfile}>
-          ← cambia profilo
-        </button>
-        <div className="week-view__nav">
-          <button onClick={() => onNavigateWeek(-1)} aria-label="settimana precedente">
-            ‹
+        <div className="week-view__heading">
+          <button className="week-view__back" onClick={onChangeProfile}>
+            ← cambia profilo
           </button>
-          <strong>
-            {formatDayMonth(dates[0])} – {formatDayMonth(dates[6])}
-          </strong>
-          <button onClick={() => onNavigateWeek(1)} aria-label="settimana successiva">
-            ›
+          <h1>La tua settimana</h1>
+        </div>
+        <div className="week-view__toolbar">
+          <div className="week-view__nav">
+            <button onClick={() => onNavigateWeek(-1)} aria-label="settimana precedente">
+              ‹
+            </button>
+            <strong>
+              {formatDayMonth(dates[0])} – {formatDayMonth(dates[6])}
+            </strong>
+            <button onClick={() => onNavigateWeek(1)} aria-label="settimana successiva">
+              ›
+            </button>
+          </div>
+          <button className="week-view__shopping" onClick={onOpenShoppingList}>
+            🛒 Lista della spesa
           </button>
         </div>
-        <button className="week-view__shopping" onClick={onOpenShoppingList}>
-          🛒 Lista della spesa
-        </button>
       </header>
 
       <div className="week-view__grid">
@@ -66,7 +71,7 @@ export function WeekView({
             <button
               key={date}
               type="button"
-              className={`week-view__day${isToday ? ' week-view__day--today' : ''}`}
+              className={`week-view__day week-view__day--${dayType.toLowerCase()}${isToday ? ' week-view__day--today' : ''}`}
               onClick={() => onSelectDay(date)}
             >
               <div className="week-view__day-head">
