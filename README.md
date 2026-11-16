@@ -23,30 +23,38 @@ di ogni giornata viene salvato in `localStorage` del browser invece che
 nel database condiviso. Utile per sviluppare la UI, ma non sincronizza
 tra dispositivi/persone finché Supabase non è collegato.
 
-## Collegare Supabase (sync condiviso tra Ezio e Arianna)
+## Collegare Supabase (sync condiviso tra dispositivi)
 
-1. Crea un progetto gratuito su [supabase.com](https://supabase.com).
-2. Nel progetto, apri **SQL editor** e incolla il contenuto di
-   `supabase/schema.sql`, poi esegui.
-3. In **Database → Replication**, abilita la pubblicazione realtime per
-   le tabelle `day_log` e `day_meal_choices` (così le modifiche di un
-   profilo si vedono in tempo reale sull'altro dispositivo).
-4. In **Project settings → API**, copia `Project URL` e `anon public key`.
-5. Copia `.env.example` in `.env.local` e incolla i due valori:
-   ```
-   VITE_SUPABASE_URL=...
-   VITE_SUPABASE_ANON_KEY=...
-   ```
-6. Per il deploy automatico, aggiungi le stesse due variabili come
-   **secrets** del repository GitHub (Settings → Secrets and variables →
-   Actions → New repository secret): `VITE_SUPABASE_URL` e
-   `VITE_SUPABASE_ANON_KEY`.
+Lo schema del database vive in `supabase/migrations/` (cartella standard
+della Supabase CLI, con `supabase/config.toml`).
 
-> Nota: lo schema usa policy di lettura/scrittura pubbliche (nessun
-> login reale, solo selettore profilo in UI, come richiesto). Il link
-> dell'app sarà pubblico ma non indicizzato: chiunque abbia l'URL può
-> leggere/scrivere i dati. Accettabile per un tool di famiglia privato;
-> da rivedere se in futuro servisse più riservatezza.
+1. **Schema.** Con l'integrazione GitHub di Supabase (dashboard →
+   Project Settings → Integrations → GitHub) e l'opzione **Deploy to
+   production** attiva, le migrazioni vengono applicate al push su `main`.
+   In alternativa: SQL editor del progetto → incolla
+   `supabase/migrations/20261116142247_init_day_plans.sql` → Run.
+2. **Chiavi per l'app.** Dashboard → Project Settings → API (o "API
+   Keys"): copia il Project URL e la chiave pubblica (anon / publishable,
+   **non** la service role). Aggiungile come secrets del repository GitHub
+   (Settings → Secrets and variables → Actions → New repository secret):
+   `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. Poi rilancia il deploy.
+3. In sviluppo locale: `.env.local` con le stesse due variabili.
+
+Come funziona la sincronizzazione (`src/lib/sync.ts`):
+
+- la copia locale (localStorage) resta quella su cui l'app lavora, anche offline;
+- ogni modifica a un giorno va in coda e parte in background verso la
+  tabella `day_plans`; al primo avvio si caricano anche i giorni salvati
+  sul dispositivo prima del collegamento;
+- le modifiche degli altri dispositivi arrivano in tempo reale; tra due
+  versioni dello stesso giorno vince la più recente;
+- in alto nella vista settimanale un indicatore mostra lo stato
+  (sincronizzato, offline, solo su questo dispositivo).
+
+> Nota: non c'è ancora un login (selettore profilo, uso in famiglia): la
+> chiave pubblica può leggere e scrivere `day_plans` (non cancellare).
+> Chiunque abbia URL e chiave dell'app potrebbe leggere i giorni del piano.
+> Il login per utente è previsto nella fase con la nutrizionista.
 
 ## Pubblicare su GitHub Pages
 
@@ -66,12 +74,15 @@ src/
     foodEquivalents.ts  deriva la densità di CHO di ogni alimento dal target del pasto
     macroEngine.ts       motore di compensazione: redistribuisce i CHO tra i pasti
     supabaseClient.ts    client Supabase (opzionale, serve .env)
+    planStore.ts         copia locale dei giorni (localStorage)
+    sync.ts              sincronizzazione con la tabella day_plans
   hooks/
     useDayPlan.ts        stato di una giornata (profilo+data): scelte, grammature, ribilanciamento
   components/
     ProfileSelector, DayPlanner, MealSection, DayTotals
 supabase/
-  schema.sql            schema Postgres da eseguire su Supabase
+  config.toml           configurazione Supabase CLI / integrazione GitHub
+  migrations/           schema del database (applicato al push su main)
 ```
 
 ## Stato e prossimi passi

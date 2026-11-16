@@ -1,5 +1,5 @@
 // Modello dati condiviso della plancia nutrizionale.
-// Rispecchia le tabelle Supabase descritte in supabase/schema.sql.
+// I giorni del piano si sincronizzano con la tabella day_plans (supabase/migrations).
 
 export type ProfileId = 'ezio' | 'arianna'
 

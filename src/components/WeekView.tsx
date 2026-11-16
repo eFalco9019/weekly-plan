@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { DayType, ProfileId } from '../types'
 import { weekDates, formatDayMonth, toIso } from '../lib/dateUtils'
 import {
@@ -11,6 +11,8 @@ import {
 } from '../hooks/useDayPlan'
 import { templatesForWeek } from '../data/weekRegistry'
 import { describeMeal } from '../lib/mealLabel'
+import { onRemotePlanChange } from '../lib/planStore'
+import { SyncBadge } from './SyncBadge'
 import { mealLabels, mealColor } from '../lib/meals'
 import type { MealType } from '../types'
 
@@ -43,6 +45,9 @@ export function WeekView({
   const [, setTick] = useState(0)
   const [shuffledWeek, setShuffledWeek] = useState<string | null>(null)
 
+  // Modifiche arrivate da un altro dispositivo: si ridisegna la settimana.
+  useEffect(() => onRemotePlanChange(() => setTick((t) => t + 1)), [])
+
   function handleToggleDayType(date: string, dayType: DayType) {
     setDayTypeForDate(profile, date, dayType)
     setTick((t) => t + 1)
@@ -67,6 +72,7 @@ export function WeekView({
             ← cambia profilo
           </button>
           <h1>La tua settimana</h1>
+          <SyncBadge />
         </div>
         <div className="week-view__toolbar">
           <div className="week-view__nav">

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { weekDates, formatDayMonth } from '../lib/dateUtils'
 import { loadDayPlan, defaultDayState } from '../hooks/useDayPlan'
 import { templatesForWeek } from '../data/weekRegistry'
 import { profiles } from '../data/profiles'
 import { buildShoppingList, categoriaLabel, type ShoppingItem } from '../lib/shoppingList'
 import type { DayPlanEntry } from '../lib/shoppingList'
+import { onRemotePlanChange } from '../lib/planStore'
 
 interface Props {
   anchorDate: string
@@ -16,6 +17,9 @@ const categoriaOrder = ['carboidrati', 'proteine', 'grassi', 'frutta', 'verdura'
 export function ShoppingList({ anchorDate, onBack }: Props) {
   const dates = weekDates(anchorDate)
   const [checked, setChecked] = useState<Set<string>>(() => new Set())
+  // Ricalcola la lista se un altro dispositivo cambia un giorno della settimana.
+  const [remoteTick, setRemoteTick] = useState(0)
+  useEffect(() => onRemotePlanChange(() => setRemoteTick((t) => t + 1)), [])
 
   const items = useMemo(() => {
     const entries: DayPlanEntry[] = []
@@ -30,7 +34,7 @@ export function ShoppingList({ anchorDate, onBack }: Props) {
     }
     return buildShoppingList(entries)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorDate])
+  }, [anchorDate, remoteTick])
 
   const grouped = useMemo(() => {
     const byCategoria = new Map<string, ShoppingItem[]>()

@@ -6,6 +6,8 @@ import { ingredientInfo } from '../data/ingredients'
 import { rebalanceDay } from '../lib/macroEngine'
 import { rotationIndex, rotationIndexAt, dayNumber, foodAlternatives } from '../lib/rotation'
 import { scaleRecipe, recipesForMeal } from '../lib/recipeEngine'
+import { readPlan, writePlanRaw, contentOf, onRemotePlanChange, type StoredDayPlan } from '../lib/planStore'
+import { queueUpload } from '../lib/sync'
 
 /**
  * Stato di un pasto per la giornata selezionata: alimento scelto per
@@ -37,38 +39,25 @@ export interface MealState {
 
 export type DayState = Record<MealType, MealState>
 
-const STORAGE_PREFIX = 'weekly-plan:dayplan:'
-
-export function storageKey(profile: ProfileId, date: string) {
-  return `${STORAGE_PREFIX}${profile}:${date}`
-}
+export { storageKey } from '../lib/planStore'
+export type { StoredDayPlan } from '../lib/planStore'
 
 /** Legge il piano salvato (se esiste) per un profilo/data, senza montare
  * l'hook: usato dalla vista settimanale per mostrare un riepilogo di
  * tutti i 7 giorni senza istanziare un useDayPlan per ciascuno. */
-export interface StoredDayPlan {
-  week: number
-  dayType: DayType
-  state: DayState
-  /** Nota libera del giorno (es. tipo di allenamento fatto). */
-  note?: string
-}
-
 export function loadDayPlan(profile: ProfileId, date: string): StoredDayPlan | null {
-  const raw = localStorage.getItem(storageKey(profile, date))
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as StoredDayPlan
-  } catch {
-    return null
-  }
+  return readPlan(profile, date)
 }
 
-/** Scrive il piano di un profilo/data in localStorage, senza montare
- * l'hook — usato da WeekView per cambiare ON/OFF direttamente dalla
- * vista settimanale. */
+/** Salva il piano di un profilo/data sul dispositivo e, se il contenuto
+ * è cambiato davvero, lo mette in coda per Supabase (src/lib/sync.ts).
+ * Un salvataggio identico non fa nulla: così una modifica arrivata da un
+ * altro telefono non rimbalza indietro all'infinito. */
 export function saveDayPlan(profile: ProfileId, date: string, plan: StoredDayPlan) {
-  localStorage.setItem(storageKey(profile, date), JSON.stringify(plan))
+  const prev = readPlan(profile, date)
+  if (prev && contentOf(prev) === contentOf(plan)) return
+  writePlanRaw(profile, date, { ...plan, note: plan.note ?? '', updatedAt: new Date().toISOString() })
+  queueUpload(profile, date)
 }
 
 /** Cambia ON/OFF per un profilo/data senza aprire il drill-down
@@ -369,12 +358,16 @@ export function useDayPlan(profile: ProfileId, date: string) {
   const [dayType, setDayType] = useState<DayType>('ON')
   const [state, setState] = useState<DayState>(() => defaultDayState(1, 'ON'))
   const [note, setNote] = useState<string>('')
+  // Per quale profilo/data lo stato in memoria è stato caricato: finché
+  // non coincide con quello richiesto non si salva, altrimenti al cambio
+  // di giorno lo stato del giorno precedente finirebbe sul nuovo.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const key = `${profile}|${date}`
 
-  // Carica da localStorage quando cambiano profilo/data.
+  // Carica dalla copia locale quando cambiano profilo/data.
   useEffect(() => {
-    const raw = localStorage.getItem(storageKey(profile, date))
-    if (raw) {
-      const parsed = JSON.parse(raw) as StoredDayPlan
+    const parsed = readPlan(profile, date)
+    if (parsed) {
       setWeekState(parsed.week)
       setDayType(parsed.dayType)
       setState(parsed.state)
@@ -385,13 +378,29 @@ export function useDayPlan(profile: ProfileId, date: string) {
       setState(defaultDayState(1, 'ON', date))
       setNote('')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLoadedFor(`${profile}|${date}`)
   }, [profile, date])
 
-  // Salva a ogni modifica.
+  // Una modifica arrivata da un altro dispositivo per questo giorno: si ricarica.
+  useEffect(
+    () =>
+      onRemotePlanChange((p, d) => {
+        if (p !== profile || d !== date) return
+        const parsed = readPlan(profile, date)
+        if (!parsed) return
+        setWeekState(parsed.week)
+        setDayType(parsed.dayType)
+        setState(parsed.state)
+        setNote(parsed.note ?? '')
+      }),
+    [profile, date],
+  )
+
+  // Salva a ogni modifica (solo se il contenuto è cambiato, vedi saveDayPlan).
   useEffect(() => {
-    localStorage.setItem(storageKey(profile, date), JSON.stringify({ week, dayType, state, note }))
-  }, [profile, date, week, dayType, state, note])
+    if (loadedFor !== key) return
+    saveDayPlan(profile, date, { week, dayType, state, note })
+  }, [loadedFor, key, profile, date, week, dayType, state, note])
 
   const templates = useMemo(() => templatesForWeek(week), [week])
 

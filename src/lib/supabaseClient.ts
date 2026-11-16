@@ -1,12 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// Fuori da Vite (es. test in Node) import.meta.env non esiste.
+const env = typeof import.meta.env !== 'undefined' ? import.meta.env : undefined
+const url = env?.VITE_SUPABASE_URL as string | undefined
+const anonKey = env?.VITE_SUPABASE_ANON_KEY as string | undefined
 
 /**
  * Finché VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY non sono impostate
- * (vedi README), l'app gira solo con stato locale in memoria — utile per
- * sviluppare la UI prima di avere un progetto Supabase pronto.
+ * (secrets GitHub per il deploy, .env.local in sviluppo), l'app salva
+ * solo sul dispositivo (localStorage); con le chiavi, src/lib/sync.ts
+ * sincronizza i giorni con la tabella day_plans.
  */
 export const supabaseEnabled = Boolean(url && anonKey)
 

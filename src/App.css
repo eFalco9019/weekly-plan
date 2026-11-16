@@ -692,6 +692,35 @@ button {
   color: var(--recupero);
 }
 
+/* Stato della sincronizzazione */
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+}
+
+.sync-badge i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.sync-badge--sincronizzato i {
+  background: var(--energia);
+}
+
+.sync-badge--connessione i {
+  background: var(--meal-colazione);
+}
+
+.sync-badge--offline i {
+  background: var(--recupero);
+}
+
 /* ------------------------------------------------------------------ */
 /* Vista settimanale                                                   */
 /* ------------------------------------------------------------------ */
