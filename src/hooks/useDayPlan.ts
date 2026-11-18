@@ -96,6 +96,12 @@ export function calcDayChoTotals(
   let target = 0
   for (const meal of ['colazione', 'pranzo', 'cena', 'spuntino'] as MealType[]) {
     const template = templates.find((t) => t.meal === meal)
+    // Pasto con carboidrati fissi (spuntino): conta la sua quota del piano.
+    if (template?.choFissoG && state[meal]) {
+      actual += template.choFissoG
+      target += template.choFissoG
+      continue
+    }
     const scelta = state[meal]?.scelte.carboidrati
     if (!template || !scelta) continue
     const density = carboDensity(week, meal, scelta)
@@ -117,6 +123,9 @@ export function calcMealChoBreakdown(
   const meals: MealType[] = ['colazione', 'pranzo', 'cena', 'spuntino']
   return meals.map((meal) => {
     const template = templates.find((t) => t.meal === meal)
+    if (template?.choFissoG && state[meal]) {
+      return { meal, actual: template.choFissoG, target: template.choFissoG }
+    }
     const scelta = state[meal]?.scelte.carboidrati
     const density = scelta ? carboDensity(week, meal, scelta) : 0
     const actual = density > 0 && scelta ? (scelta.grammi * density) / 100 + (scelta.choFissiG ?? 0) : 0

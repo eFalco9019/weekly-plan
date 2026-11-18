@@ -43,6 +43,9 @@ export interface MealTemplate {
   meal: MealType
   targetChoOnG: number
   targetChoOffG: number
+  /** Carboidrati del pasto che il piano dà per fissi (porzioni da tabella,
+   * non regolate dal motore): oggi lo spuntino. Contano nel totale del giorno. */
+  choFissoG?: number
   targetProteinG?: number
   targetFatG?: number
 }

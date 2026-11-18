@@ -4,7 +4,7 @@ import { mealEquivalents } from '../hooks/useDayPlan'
 import { recipes } from '../data/recipes'
 import { recipesForMeal, scaleRecipe } from '../lib/recipeEngine'
 import { mealLabels, mealIcons } from '../lib/meals'
-import { fmtInt } from '../lib/format'
+import { fmt1, fmtInt } from '../lib/format'
 
 /** Pulsante compatto per escludere il pasto dalla compensazione automatica. */
 function LockToggle({ locked, onToggle }: { locked: boolean; onToggle: () => void }) {
@@ -100,6 +100,9 @@ export function MealSection({
         {targetCho !== undefined && targetCho > 0 && (
           <span className="meal-section__target">{fmtInt(targetCho)} g di carboidrati</span>
         )}
+        {template?.choFissoG ? (
+          <span className="meal-section__target">{fmt1(template.choFissoG)} g di carboidrati, porzioni fisse</span>
+        ) : null}
       </header>
 
       {recipeOptions.length > 0 && (

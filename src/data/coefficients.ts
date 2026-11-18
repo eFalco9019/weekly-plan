@@ -98,8 +98,26 @@ export function choGiorno(c: PlanCoefficients, week: number, dayType: DayType): 
 
 /** Target dei pasti di una settimana, calcolati dai coefficienti. */
 export function templatesFromCoefficients(c: PlanCoefficients, week: number): MealTemplate[] {
-  const cho = (meal: TrackedMeal, dayType: DayType) =>
-    r05(((choGiorno(c, week, dayType) - c.choSpuntinoG) * c.quoteCho[dayType][meal]) / 100)
+  // Quote arrotondate a 0,5 g; lo scarto dell'arrotondamento va al pasto con
+  // l'errore più grande, così pasti + spuntino danno esattamente il totale.
+  const tracked: TrackedMeal[] = ['colazione', 'pranzo', 'cena']
+  const split = (dayType: DayType): Record<TrackedMeal, number> => {
+    const resto = choGiorno(c, week, dayType) - c.choSpuntinoG
+    const raw = tracked.map((m) => (resto * c.quoteCho[dayType][m]) / 100)
+    const out = raw.map(r05)
+    const scarto = r05(resto - out.reduce((a, b) => a + b, 0))
+    if (scarto !== 0) {
+      let i = 0
+      raw.forEach((r, k) => {
+        if (Math.abs(r - out[k]) > Math.abs(raw[i] - out[i])) i = k
+      })
+      out[i] += scarto
+    }
+    return { colazione: out[0], pranzo: out[1], cena: out[2] }
+  }
+  const choOn = split('ON')
+  const choOff = split('OFF')
+  const cho = (meal: TrackedMeal, dayType: DayType) => (dayType === 'ON' ? choOn : choOff)[meal]
   const proteine = c.proteineGKg * c.pesoKg
   const prot = (meal: keyof PlanCoefficients['quoteProteine']) => r05((proteine * c.quoteProteine[meal]) / 100)
   return [
@@ -113,7 +131,8 @@ export function templatesFromCoefficients(c: PlanCoefficients, week: number): Me
       targetFatG: c.grassiPranzoG,
     },
     { week, meal: 'cena', targetChoOnG: cho('cena', 'ON'), targetChoOffG: cho('cena', 'OFF'), targetProteinG: prot('cena') },
-    // Lo spuntino è a scelta libera: nessun target di carboidrati tracciato (il motore non lo usa).
-    { week, meal: 'spuntino', targetChoOnG: 0, targetChoOffG: 0, targetProteinG: prot('spuntino') },
+    // Lo spuntino ha porzioni fisse da tabella: i suoi carboidrati non si
+    // regolano (target 0 per il motore) ma contano nel totale del giorno.
+    { week, meal: 'spuntino', targetChoOnG: 0, targetChoOffG: 0, choFissoG: c.choSpuntinoG, targetProteinG: prot('spuntino') },
   ]
 }
