@@ -1,35 +1,30 @@
 import type { DayState } from '../hooks/useDayPlan'
-import type { DayType, MealTemplate, MealType } from '../types'
+import type { DayType, MealType } from '../types'
+import type { Piano } from '../data/piano'
 import { mealOrder as meals, mealLabels, mealIcons, mealColor } from '../lib/meals'
 import { calcDayChoTotals, calcMealChoBreakdown } from '../hooks/useDayPlan'
 import { mealMacros } from '../lib/mealMacros'
 import { SegmentedRing, type RingSegment } from './SegmentedRing'
-import { fmt1 } from '../lib/format'
+import { fmt1, fmtInt as fmt } from '../lib/format'
 
 interface Props {
+  piano: Piano
   state: DayState
-  templates: MealTemplate[]
   dayType: DayType
   week: number
-  /** Target giornalieri del profilo. */
-  proteinG?: number
-  fatG?: number
-}
-
-function fmt(n: number) {
-  return Math.round(n)
 }
 
 /**
  * Riepilogo del giorno: un anello per macro con quanto si mangia davvero,
  * diviso per pasto, e il target del giorno al centro.
  */
-export function DayTotals({ state, templates, dayType, week, proteinG = 0, fatG = 0 }: Props) {
-  const { actual, target } = calcDayChoTotals(week, dayType, state, templates)
+export function DayTotals({ piano, state, dayType, week }: Props) {
+  const { proteineG: proteinG, grassiG: fatG } = piano
+  const cho = calcMealChoBreakdown(piano, week, dayType, state)
+  const { actual, target } = calcDayChoTotals(piano, week, dayType, state)
   const diff = Math.round((actual - target) * 10) / 10
   const label = dayType === 'ON' ? 'Giorno energia' : 'Giorno recupero'
 
-  const cho = calcMealChoBreakdown(week, dayType, state, templates)
   const macros = Object.fromEntries(meals.map((m) => [m, mealMacros(m, state[m])])) as Record<
     MealType,
     { prot: number; fat: number }

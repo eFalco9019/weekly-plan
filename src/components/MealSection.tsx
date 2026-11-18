@@ -1,6 +1,6 @@
 import type { MealState } from '../hooks/useDayPlan'
-import type { DayType, MealTemplate, MealType, ProfileId } from '../types'
-import { mealEquivalents } from '../hooks/useDayPlan'
+import type { DayType, MealTemplate, MealType } from '../types'
+import { equivalents, type Piano } from '../data/piano'
 import { recipes } from '../data/recipes'
 import { recipesForMeal, scaleRecipe } from '../lib/recipeEngine'
 import { mealLabels, mealIcons } from '../lib/meals'
@@ -42,7 +42,7 @@ const categoriaLabels: Record<string, string> = {
 }
 
 interface Props {
-  profile: ProfileId
+  piano: Piano
   meal: MealType
   mealState: MealState
   dayType: DayType
@@ -56,7 +56,7 @@ interface Props {
 }
 
 export function MealSection({
-  profile,
+  piano,
   meal,
   mealState,
   dayType,
@@ -68,7 +68,7 @@ export function MealSection({
   onAssignRecipe,
   onClearRecipe,
 }: Props) {
-  const groups = mealEquivalents(week, meal, profile)
+  const groups = equivalents(piano, week, meal)
   const targetCho = template
     ? dayType === 'ON'
       ? template.targetChoOnG

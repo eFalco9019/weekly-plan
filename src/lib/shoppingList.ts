@@ -1,5 +1,5 @@
 import type { DayState, MealChoice } from '../hooks/useDayPlan'
-import type { DayType, MealTemplate, MealType } from '../types'
+import type { MealType } from '../types'
 import { recipes } from '../data/recipes'
 import { scaleRecipe } from './recipeEngine'
 import { ingredientInfo } from '../data/ingredients'
@@ -24,15 +24,6 @@ const categoriaLabels: Record<string, string> = {
 
 export function categoriaLabel(categoria: string): string {
   return categoriaLabels[categoria] ?? categoria
-}
-
-/** Un giorno di piano da aggregare nella lista della spesa (già risolto
- * per profilo+data, salvato o di default). */
-export interface DayPlanEntry {
-  week: number
-  dayType: DayType
-  state: DayState
-  templates: MealTemplate[]
 }
 
 /** Ingredienti di un pasto-ricetta, con la grammatura effettiva
@@ -61,12 +52,12 @@ export function shoppingName(nome: string): string {
   return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : nome
 }
 
-export function buildShoppingList(entries: DayPlanEntry[]): ShoppingItem[] {
+export function buildShoppingList(days: DayState[]): ShoppingItem[] {
   const totals = new Map<string, ShoppingItem>()
 
-  for (const entry of entries) {
+  for (const state of days) {
     for (const meal of ['colazione', 'pranzo', 'cena', 'spuntino'] as MealType[]) {
-      const mealState = entry.state[meal]
+      const mealState = state[meal]
       if (!mealState) continue
       const recipeChoice = mealState.scelte.carboidrati
       // Un pasto-ricetta è la ricetta intera: le altre categorie del pasto

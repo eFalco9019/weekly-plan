@@ -1,22 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { DayType, FoodEquivalent, MealTemplate, MealType, ProfileId, Recipe } from '../types'
-import { mealEquivalentsForWeek, templatesForWeek } from '../data/weekRegistry'
+import type { DayType, MealType, Recipe } from '../types'
+import { equivalents, mealTarget, mealTargets, type Piano } from '../data/piano'
 import { recipes } from '../data/recipes'
 import { ingredientInfo } from '../data/ingredients'
-import { rebalanceDay } from '../lib/macroEngine'
+import { rebalanceDay, mealCho, type EngineMeal } from '../lib/macroEngine'
 import { rotationIndex, rotationIndexAt, dayNumber, foodAlternatives } from '../lib/rotation'
 import { scaleRecipe, recipesForMeal } from '../lib/recipeEngine'
 import { readPlan, writePlanRaw, contentOf, onRemotePlanChange, type StoredDayPlan } from '../lib/planStore'
 import { queueUpload } from '../lib/sync'
 
 /**
- * Stato di un pasto per la giornata selezionata: alimento scelto per
- * ogni categoria + grammatura. I dati del piano (alimenti, target) sono
- * week-aware: vedi src/data/weekRegistry.ts (Settimane 1-4).
- *
- * `choPer100gOverride` + `recipeId` sono valorizzati quando il
- * carboidrato del pasto viene da una ricetta della libreria (vedi
- * assignRecipe) invece che dalla tabella di equivalenza standard.
+ * Scelta di una categoria di un pasto: alimento e grammi. Se il pasto è una
+ * ricetta, la scelta "carboidrati" porta `recipeId` e la densità del suo
+ * ingrediente regolabile.
  */
 export interface MealChoice {
   alimento: string
@@ -24,12 +20,9 @@ export interface MealChoice {
   bloccato?: boolean
   choPer100gOverride?: number
   recipeId?: string
-  /** Solo per le ricette: CHO che contano sul target portati dagli
-   * ingredienti non scalabili (legumi, castagne…), sommati a quelli
-   * dell'ingrediente scalabile. */
+  /** Solo ricette: carboidrati degli ingredienti non regolabili (legumi, castagne…). */
   choFissiG?: number
-  /** Ricetta proposta dalla rotazione automatica (non scelta a mano):
-   * "Varia il menu" può sostituirla. */
+  /** Ricetta proposta dalla rotazione: "Varia il menu" può sostituirla. */
   recipeAuto?: boolean
 }
 
@@ -39,142 +32,76 @@ export interface MealState {
 
 export type DayState = Record<MealType, MealState>
 
-export { storageKey } from '../lib/planStore'
 export type { StoredDayPlan } from '../lib/planStore'
 
-/** Legge il piano salvato (se esiste) per un profilo/data, senza montare
- * l'hook: usato dalla vista settimanale per mostrare un riepilogo di
- * tutti i 7 giorni senza istanziare un useDayPlan per ciascuno. */
-export function loadDayPlan(profile: ProfileId, date: string): StoredDayPlan | null {
-  return readPlan(profile, date)
-}
+const meals: MealType[] = ['colazione', 'pranzo', 'spuntino', 'cena']
 
-/** Salva il piano di un profilo/data sul dispositivo e, se il contenuto
- * è cambiato davvero, lo mette in coda per Supabase (src/lib/sync.ts).
- * Un salvataggio identico non fa nulla: così una modifica arrivata da un
- * altro telefono non rimbalza indietro all'infinito. */
-export function saveDayPlan(profile: ProfileId, date: string, plan: StoredDayPlan) {
-  const prev = readPlan(profile, date)
+/** Salva un giorno e, se il contenuto è cambiato davvero, lo mette in coda per il database. */
+export function saveDayPlan(date: string, plan: StoredDayPlan) {
+  const prev = readPlan(date)
   if (prev && contentOf(prev) === contentOf(plan)) return
-  writePlanRaw(profile, date, { ...plan, note: plan.note ?? '', updatedAt: new Date().toISOString() })
-  queueUpload(profile, date)
+  writePlanRaw(date, { ...plan, note: plan.note ?? '', updatedAt: new Date().toISOString() })
+  queueUpload(date)
 }
 
-/** Cambia ON/OFF per un profilo/data senza aprire il drill-down
- * giornaliero: mantiene la stessa settimana nutrizionale e la nota
- * eventualmente già scritta, e resetta le scelte dei pasti ai valori
- * di default del nuovo tipo di giornata (stessa logica di
- * setDayTypeAndReset dentro useDayPlan). */
-export function setDayTypeForDate(profile: ProfileId, date: string, dayType: DayType) {
-  const saved = loadDayPlan(profile, date)
-  const week = saved?.week ?? 1
-  const state = defaultDayState(profile, week, dayType, date)
-  saveDayPlan(profile, date, { week, dayType, state, note: saved?.note })
-}
-
-/** Scrive/aggiorna la nota del giorno (es. tipo di allenamento) senza
- * toccare dayType/settimana/scelte — usato dalla vista settimanale per
- * annotare rapidamente senza aprire il drill-down. */
-export function setNoteForDate(profile: ProfileId, date: string, note: string) {
-  const saved = loadDayPlan(profile, date)
-  const week = saved?.week ?? 1
+/** Il giorno salvato, oppure quello proposto dalla rotazione se non è mai stato aperto. */
+export function dayOrDefault(piano: Piano, date: string): Required<Omit<StoredDayPlan, 'updatedAt'>> {
+  const saved = readPlan(date)
+  const week = Math.min(saved?.week ?? 1, piano.settimane)
   const dayType = saved?.dayType ?? 'ON'
-  const state = saved?.state ?? defaultDayState(profile, week, dayType, date)
-  saveDayPlan(profile, date, { week, dayType, state, note })
+  return { week, dayType, state: saved?.state ?? defaultDayState(piano, week, dayType, date), note: saved?.note ?? '' }
 }
 
-/** Totale CHO (effettivo vs target) di una giornata, dato lo stato dei
- * pasti. Condiviso tra DayTotals (drill-down giornaliero) e WeekView
- * (riepilogo settimanale). */
-export function calcDayChoTotals(
-  week: number,
-  dayType: DayType,
-  state: DayState,
-  templates: MealTemplate[],
-): { actual: number; target: number } {
-  let actual = 0
-  let target = 0
-  for (const meal of ['colazione', 'pranzo', 'cena', 'spuntino'] as MealType[]) {
-    const template = templates.find((t) => t.meal === meal)
-    // Pasto con carboidrati fissi (spuntino): conta la sua quota del piano.
-    if (template?.choFissoG && state[meal]) {
-      actual += template.choFissoG
-      target += template.choFissoG
-      continue
-    }
-    const scelta = state[meal]?.scelte.carboidrati
-    if (!template || !scelta) continue
-    const density = carboDensity(week, meal, scelta)
-    if (density <= 0) continue
-    actual += (scelta.grammi * density) / 100 + (scelta.choFissiG ?? 0)
-    target += dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG
-  }
-  return { actual, target }
+/** Cambia ON/OFF di una data: stessa settimana e nota, pasti ricalcolati per il nuovo tipo. */
+export function setDayTypeForDate(piano: Piano, date: string, dayType: DayType) {
+  const { week, note } = dayOrDefault(piano, date)
+  saveDayPlan(date, { week, dayType, state: defaultDayState(piano, week, dayType, date), note })
 }
 
-/** Come calcDayChoTotals, ma pasto per pasto — usato dal grafico "CHO
- * per pasto" nel drill-down giornaliero. */
-export function calcMealChoBreakdown(
-  week: number,
-  dayType: DayType,
-  state: DayState,
-  templates: MealTemplate[],
-): { meal: MealType; actual: number; target: number }[] {
-  const meals: MealType[] = ['colazione', 'pranzo', 'cena', 'spuntino']
+export function setNoteForDate(piano: Piano, date: string, note: string) {
+  saveDayPlan(date, { ...dayOrDefault(piano, date), note })
+}
+
+/** Densità di CHO della scelta carboidrati di un pasto (ricetta o tabella). */
+export function carboDensity(piano: Piano, week: number, meal: MealType, scelta: MealChoice | undefined): number {
+  if (!scelta) return 0
+  if (scelta.choPer100gOverride) return scelta.choPer100gOverride
+  return equivalents(piano, week, meal).carboidrati?.find((e) => e.alimento === scelta.alimento)?.choPer100g ?? 0
+}
+
+/** Carboidrati di ogni pasto, effettivi e target. Lo spuntino conta con la sua quota fissa. */
+export function calcMealChoBreakdown(piano: Piano, week: number, dayType: DayType, state: DayState) {
   return meals.map((meal) => {
-    const template = templates.find((t) => t.meal === meal)
-    if (template?.choFissoG && state[meal]) {
-      return { meal, actual: template.choFissoG, target: template.choFissoG }
-    }
+    const t = mealTarget(piano, week, meal)
+    if (t.choFissoG) return { meal, actual: state[meal] ? t.choFissoG : 0, target: t.choFissoG }
     const scelta = state[meal]?.scelte.carboidrati
-    const density = scelta ? carboDensity(week, meal, scelta) : 0
-    const actual = density > 0 && scelta ? (scelta.grammi * density) / 100 + (scelta.choFissiG ?? 0) : 0
-    const target = template ? (dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG) : 0
-    return { meal, actual, target }
+    const density = carboDensity(piano, week, meal, scelta)
+    const actual = scelta && density > 0 ? mealCho({ grammi: scelta.grammi, density, fissi: scelta.choFissiG }) : 0
+    return { meal, actual, target: dayType === 'ON' ? t.targetChoOnG : t.targetChoOffG }
   })
 }
 
-/** Alimenti disponibili per un pasto, nella settimana indicata. */
-export function mealEquivalents(week: number, meal: MealType, profile: ProfileId = 'arianna') {
-  return mealEquivalentsForWeek(week, meal, profile)
+export function calcDayChoTotals(piano: Piano, week: number, dayType: DayType, state: DayState) {
+  return calcMealChoBreakdown(piano, week, dayType, state).reduce(
+    (tot, m) => ({ actual: tot.actual + m.actual, target: tot.target + m.target }),
+    { actual: 0, target: 0 },
+  )
 }
 
-/** Densità di CHO per 100g della scelta carboidrati corrente di un pasto:
- * usa l'override (ricetta) se presente, altrimenti cerca nella tabella
- * di equivalenza standard. */
-export function carboDensity(week: number, meal: MealType, scelta: MealChoice | undefined): number {
-  if (!scelta) return 0
-  if (scelta.choPer100gOverride) return scelta.choPer100gOverride
-  const found = mealEquivalents(week, meal).carboidrati?.find((e) => e.alimento === scelta.alimento)
-  return found?.choPer100g ?? 0
-}
-
-/** Densità di CHO dell'ingrediente scalabile di una ricetta per un pasto:
- * se è un alimento delle tabelle del piano (es. "Riso basmati" a cena) usa
- * la stessa densità del piano, così la ricetta rispetta le sue grammature;
- * altrimenti il valore della ricetta o dell'archivio ingredienti. */
-export function recipeDensity(week: number, meal: MealType, recipe: Recipe): number {
+/** Densità dell'ingrediente regolabile di una ricetta: quella del piano se è un alimento delle tabelle. */
+function recipeDensity(piano: Piano, week: number, meal: MealType, recipe: Recipe): number {
   const sc = recipe.ingredienti.find((i) => i.scalabile)
   if (!sc) return 0
-  const plan = mealEquivalents(week, meal).carboidrati?.find((e) => e.alimento.toLowerCase() === sc.nome.toLowerCase())
+  const plan = equivalents(piano, week, meal).carboidrati?.find((e) => e.alimento.toLowerCase() === sc.nome.toLowerCase())
   return plan?.choPer100g ?? sc.choPer100g ?? ingredientInfo(sc.nome)?.cho ?? 0
 }
 
 /** La scelta "carboidrati" che rappresenta una ricetta assegnata a un pasto. */
-export function recipeChoice(
-  profile: ProfileId,
-  week: number,
-  meal: MealType,
-  dayType: DayType,
-  recipe: Recipe,
-  auto = false,
-): MealChoice | null {
-  const template = templatesForWeek(week, profile).find((t) => t.meal === meal)
-  if (!template) return null
-  const density = recipeDensity(week, meal, recipe)
+function recipeChoice(piano: Piano, week: number, meal: MealType, dayType: DayType, recipe: Recipe, auto = false): MealChoice | null {
+  const t = mealTarget(piano, week, meal)
+  const density = recipeDensity(piano, week, meal, recipe)
   if (density <= 0) return null
-  const targetChoG = dayType === 'ON' ? template.targetChoOnG : template.targetChoOffG
-  const scaled = scaleRecipe(recipe, { targetChoG, density })
+  const scaled = scaleRecipe(recipe, { targetChoG: dayType === 'ON' ? t.targetChoOnG : t.targetChoOffG, density })
   if (!scaled.scalabile) return null
   return {
     alimento: scaled.scalabile.nome,
@@ -186,57 +113,55 @@ export function recipeChoice(
   }
 }
 
+// ---------------------------------------------------------------------
+// Rotazione: varietà del menu tra i giorni
+// ---------------------------------------------------------------------
+
 /** Quanti giorni su 7 la rotazione propone una ricetta per pasto. */
 const recipeDaysPerWeek: Partial<Record<MealType, number>> = { colazione: 2, pranzo: 3, cena: 2 }
 
-/** Ingredienti di una ricetta che non devono ripetersi negli altri pasti
- * dello stesso giorno (fonti di carboidrati, proteine, verdure). */
+/** Categorie in cui lo stesso alimento non si ripete tra i pasti dello stesso giorno. */
+const noRepeatInDay = new Set(['carboidrati', 'proteine', 'verdura'])
+
+/** Inizio (lunedì) del blocco di 7 giorni che contiene `day` (dayNumber 0 = giovedì 1/1/1970). */
+const weekStartOf = (day: number) => day - ((((day + 3) % 7) + 7) % 7)
+
+/** Ingredienti di una ricetta che non devono ripetersi negli altri pasti del giorno. */
 function recipeKeyFoods(recipe: Recipe): string[] {
   return recipe.ingredienti
-    .filter((i) => {
-      const cat = ingredientInfo(i.nome)?.cat
-      return cat === 'carboidrati' || cat === 'proteine' || cat === 'verdura'
-    })
+    .filter((i) => noRepeatInDay.has(ingredientInfo(i.nome)?.cat ?? ''))
     .flatMap((i) => foodAlternatives(i.nome))
 }
 
-/** Ricette candidate per lo slot-ricetta di un pasto in un giorno, in
- * ordine di preferenza (vuoto se quel giorno il pasto è "da tabella").
- * In ogni blocco di 7 giorni la ricetta compare `recipeDaysPerWeek`
- * volte, e le ricette si alternano in ordine prima di ripetersi. */
+/**
+ * Ricette candidate per un pasto in un giorno, in ordine di preferenza (vuoto
+ * se quel giorno il pasto è da tabella). In ogni settimana la ricetta compare
+ * `recipeDaysPerWeek` volte e le ricette si alternano prima di ripetersi.
+ */
 function recipeCandidates(meal: MealType, day: number, seed: number): Recipe[] {
   const k = recipeDaysPerWeek[meal]
   const pool = recipesForMeal(recipes, meal)
   if (!k || pool.length === 0) return []
   const isSlot = (d: number) => rotationIndexAt(d, `${meal}:slot`, 7, seed) < k
   if (!isSlot(day)) return []
-  // Blocchi lunedì-domenica (dayNumber 0 = giovedì 1/1/1970).
-  const blockStart = day - (((day + 3) % 7) + 7) % 7
+  const blockStart = weekStartOf(day)
   let rank = 0
   for (let d = blockStart; d < day; d++) if (isSlot(d)) rank++
   const start = ((blockStart + 3) / 7) * k + rank + rotationIndexAt(0, `${meal}:recipe`, pool.length, seed)
   return pool.map((_, i) => pool[(((start + i) % pool.length) + pool.length) % pool.length])
 }
 
-/** Alimenti "principali" (carbo, proteine, verdure) che la rotazione mette
- * in un pasto in un giorno, senza considerare gli aggiustamenti: usati per
- * non ripetere lo stesso alimento nello stesso pasto di giorni vicini. */
-function neighbourFoods(profile: ProfileId, week: number, meal: MealType, day: number, seed: number): string[] {
+/** Alimenti principali che la rotazione mette in un pasto in un giorno (per non ripeterli nei giorni vicini). */
+function neighbourFoods(piano: Piano, week: number, meal: MealType, day: number, seed: number): string[] {
   const recipe = recipeCandidates(meal, day, seed)[0]
   if (recipe) return recipeKeyFoods(recipe)
-  const out: string[] = []
-  for (const [categoria, items] of Object.entries(mealEquivalents(week, meal, profile))) {
-    if (!noRepeatInDay.has(categoria) || items.length === 0) continue
-    out.push(...foodAlternatives(items[rotationIndexAt(day, `${meal}:${categoria}`, items.length, seed)].alimento))
-  }
-  return out
+  return Object.entries(equivalents(piano, week, meal))
+    .filter(([categoria, items]) => noRepeatInDay.has(categoria) && items.length > 0)
+    .flatMap(([categoria, items]) => foodAlternatives(items[rotationIndexAt(day, `${meal}:${categoria}`, items.length, seed)].alimento))
 }
 
-/** Ricetta proposta dalla rotazione per un pasto in una data, o null se
- * quel giorno il pasto resta "da tabella" (o nessuna ricetta è compatibile
- * con il resto della giornata e con i giorni vicini). */
 function rotationRecipe(
-  profile: ProfileId,
+  piano: Piano,
   week: number,
   meal: MealType,
   dayType: DayType,
@@ -246,22 +171,18 @@ function rotationRecipe(
   avoid: Set<string>,
 ): MealChoice | null {
   const day = dayNumber(date)
-  const candidates = recipeCandidates(meal, day, seed)
-  // Ricette già previste negli altri giorni della stessa settimana per
-  // questo pasto: se la prima scelta va scartata, non si "ruba" quella di
-  // un altro giorno (eviterebbe la stessa ricetta due volte in settimana).
-  const weekStart = day - (((day + 3) % 7) + 7) % 7
-  const takenThisWeek = new Set<string>()
+  // Le ricette già previste negli altri giorni della settimana non si "rubano".
+  const weekStart = weekStartOf(day)
+  const taken = new Set<string>()
   for (let d = weekStart; d < weekStart + 7; d++) {
-    if (d === day) continue
-    const first = recipeCandidates(meal, d, seed)[0]
-    if (first) takenThisWeek.add(first.id)
+    const first = d === day ? undefined : recipeCandidates(meal, d, seed)[0]
+    if (first) taken.add(first.id)
   }
-  for (const [i, recipe] of candidates.entries()) {
-    if (i > 0 && takenThisWeek.has(recipe.id)) continue
+  for (const [i, recipe] of recipeCandidates(meal, day, seed).entries()) {
+    if (i > 0 && taken.has(recipe.id)) continue
     const keys = recipeKeyFoods(recipe)
     if (keys.some((key) => usedToday.has(key) || avoid.has(key))) continue
-    const choice = recipeChoice(profile, week, meal, dayType, recipe, true)
+    const choice = recipeChoice(piano, week, meal, dayType, recipe, true)
     if (!choice) continue
     for (const key of keys) usedToday.add(key)
     return choice
@@ -269,310 +190,164 @@ function rotationRecipe(
   return null
 }
 
-/** Categorie in cui lo stesso alimento non deve ripetersi tra i pasti
- * della stessa giornata (es. riso, pollo o la stessa verdura a pranzo e a cena). */
-const noRepeatInDay = new Set(['carboidrati', 'proteine', 'verdura'])
-
-function defaultMealState(
-  profile: ProfileId,
+function tableMealState(
+  piano: Piano,
   week: number,
   meal: MealType,
   dayType: DayType,
   date: string | undefined,
   seed: number,
   usedToday: Set<string>,
-  /** Alimenti da evitare in questo pasto perché già nello stesso pasto del
-   * giorno prima o dopo (es. il merluzzo della ricetta di ieri a cena). */
   avoid: Set<string> = new Set(),
 ): MealState {
-  const groups = mealEquivalents(week, meal, profile)
   const scelte: MealState['scelte'] = {}
-  for (const [categoria, items] of Object.entries(groups)) {
+  for (const [categoria, items] of Object.entries(equivalents(piano, week, meal))) {
     if (items.length === 0) continue
     let idx = date ? rotationIndex(date, `${meal}:${categoria}`, items.length, seed) : 0
     if (date && noRepeatInDay.has(categoria)) {
-      const blocked = (alimento: string) =>
-        foodAlternatives(alimento).some((alt) => usedToday.has(alt) || avoid.has(alt))
-      if (blocked(items[idx].alimento)) {
-        // Prima alternativa libera; se non ce n'è, si tiene la scelta naturale.
-        for (let k = 1; k < items.length; k++) {
-          const cand = (idx + k) % items.length
-          if (!blocked(items[cand].alimento)) {
-            idx = cand
-            break
-          }
+      const blocked = (a: string) => foodAlternatives(a).some((alt) => usedToday.has(alt) || avoid.has(alt))
+      // Prima alternativa libera; se non ce n'è, resta la scelta naturale.
+      for (let k = 0; k < items.length; k++) {
+        const cand = (idx + k) % items.length
+        if (!blocked(items[cand].alimento)) {
+          idx = cand
+          break
         }
       }
       for (const alt of foodAlternatives(items[idx].alimento)) usedToday.add(alt)
     }
     const item = items[idx]
-    scelte[categoria] = {
-      alimento: item.alimento,
-      grammi: dayType === 'ON' ? item.grammiOn : item.grammiOff,
-    }
+    scelte[categoria] = { alimento: item.alimento, grammi: dayType === 'ON' ? item.grammiOn : item.grammiOff }
   }
   return { scelte }
 }
 
 /**
- * Scelte di default di una giornata. Con `date`, ogni categoria ruota tra
- * gli alimenti equivalenti in base alla data (varietà tra i giorni, vedi
- * src/lib/rotation.ts); senza `date`, prende il primo alimento di ogni
- * tabella. `seed` sposta la rotazione su un'altra combinazione.
+ * Pasti proposti per un giorno. Con `date` gli alimenti ruotano in base alla
+ * data (varietà, src/lib/rotation.ts) e alcuni pasti diventano ricette;
+ * `seed` sposta la rotazione su un'altra combinazione.
  */
-export function defaultDayState(
-  profile: ProfileId,
-  week: number,
-  dayType: DayType,
-  date?: string,
-  seed = 0,
-): DayState {
+export function defaultDayState(piano: Piano, week: number, dayType: DayType, date?: string, seed = 0): DayState {
   const usedToday = new Set<string>()
-  // Ordine della giornata: le scelte di colazione/pranzo condizionano la cena.
   const build = (meal: MealType): MealState => {
     const avoid = new Set<string>()
     if (date) {
       const day = dayNumber(date)
-      for (const d of [day - 1, day + 1]) for (const f of neighbourFoods(profile, week, meal, d, seed)) avoid.add(f)
+      for (const d of [day - 1, day + 1]) for (const f of neighbourFoods(piano, week, meal, d, seed)) avoid.add(f)
     }
-    const recipe = date ? rotationRecipe(profile, week, meal, dayType, date, seed, usedToday, avoid) : null
-    if (!recipe) return defaultMealState(profile, week, meal, dayType, date, seed, usedToday, avoid)
-    // Pasto-ricetta: le scelte da tabella restano pronte se si toglie la
-    // ricetta, ma non "occupano" alimenti per gli altri pasti del giorno.
-    const fallback = defaultMealState(profile, week, meal, dayType, date, seed, new Set(usedToday))
+    const recipe = date ? rotationRecipe(piano, week, meal, dayType, date, seed, usedToday, avoid) : null
+    if (!recipe) return tableMealState(piano, week, meal, dayType, date, seed, usedToday, avoid)
+    // Le scelte da tabella restano pronte se si toglie la ricetta, senza occupare alimenti.
+    const fallback = tableMealState(piano, week, meal, dayType, date, seed, new Set(usedToday))
     return { scelte: { ...fallback.scelte, carboidrati: recipe } }
   }
+  // Ordine della giornata: colazione e pranzo condizionano la cena.
   const colazione = build('colazione')
   const pranzo = build('pranzo')
   const cena = build('cena')
-  const spuntino = build('spuntino')
-  return { colazione, pranzo, cena, spuntino }
+  return { colazione, pranzo, cena, spuntino: build('spuntino') }
 }
 
-/**
- * Rigenera il menu (nuove combinazioni) di una lista di date, mantenendo
- * per ciascun giorno ON/OFF, settimana nutrizionale, nota e le ricette
- * scelte a mano (quelle proposte dalla rotazione vengono rimescolate).
- * Usato dal pulsante della vista settimanale.
- */
-export function regenerateMenu(profile: ProfileId, dates: string[], seed: number) {
+/** Nuove combinazioni per le date indicate, tenendo ON/OFF, settimana, nota e ricette scelte a mano. */
+export function regenerateMenu(piano: Piano, dates: string[], seed: number) {
   for (const date of dates) {
-    const saved = loadDayPlan(profile, date)
-    const week = saved?.week ?? 1
-    const dayType = saved?.dayType ?? 'ON'
-    const state = defaultDayState(profile, week, dayType, date, seed)
-    if (saved) {
-      for (const meal of Object.keys(state) as MealType[]) {
-        const c = saved.state[meal]?.scelte.carboidrati
-        if (c?.recipeId && !c.recipeAuto) state[meal] = saved.state[meal]
-      }
+    const saved = readPlan(date)
+    const { week, dayType, note } = dayOrDefault(piano, date)
+    const state = defaultDayState(piano, week, dayType, date, seed)
+    for (const meal of meals) {
+      const c = saved?.state[meal]?.scelte.carboidrati
+      if (c?.recipeId && !c.recipeAuto) state[meal] = saved!.state[meal]
     }
-    saveDayPlan(profile, date, { week, dayType, state, note: saved?.note })
+    saveDayPlan(date, { week, dayType, state, note })
   }
 }
 
-export function useDayPlan(profile: ProfileId, date: string) {
-  const [week, setWeekState] = useState<number>(1)
-  const [dayType, setDayType] = useState<DayType>('ON')
-  const [state, setState] = useState<DayState>(() => defaultDayState(profile, 1, 'ON'))
-  const [note, setNote] = useState<string>('')
-  // Per quale profilo/data lo stato in memoria è stato caricato: finché
-  // non coincide con quello richiesto non si salva, altrimenti al cambio
-  // di giorno lo stato del giorno precedente finirebbe sul nuovo.
+// ---------------------------------------------------------------------
+// Hook del giorno
+// ---------------------------------------------------------------------
+
+export function useDayPlan(piano: Piano, date: string) {
+  const [day, setDay] = useState(() => dayOrDefault(piano, date))
+  // Per quale data è stato caricato lo stato: finché non coincide non si salva,
+  // altrimenti al cambio di giorno lo stato precedente finirebbe sul nuovo.
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
-  const key = `${profile}|${date}`
 
-  // Carica dalla copia locale quando cambiano profilo/data.
   useEffect(() => {
-    const parsed = readPlan(profile, date)
-    if (parsed) {
-      setWeekState(parsed.week)
-      setDayType(parsed.dayType)
-      setState(parsed.state)
-      setNote(parsed.note ?? '')
-    } else {
-      setWeekState(1)
-      setDayType('ON')
-      setState(defaultDayState(profile, 1, 'ON', date))
-      setNote('')
-    }
-    setLoadedFor(`${profile}|${date}`)
-  }, [profile, date])
+    setDay(dayOrDefault(piano, date))
+    setLoadedFor(date)
+  }, [piano, date])
 
-  // Una modifica arrivata da un altro dispositivo per questo giorno: si ricarica.
-  useEffect(
-    () =>
-      onRemotePlanChange((p, d) => {
-        if (p !== profile || d !== date) return
-        const parsed = readPlan(profile, date)
-        if (!parsed) return
-        setWeekState(parsed.week)
-        setDayType(parsed.dayType)
-        setState(parsed.state)
-        setNote(parsed.note ?? '')
-      }),
-    [profile, date],
-  )
+  useEffect(() => onRemotePlanChange((d) => d === date && setDay(dayOrDefault(piano, date))), [piano, date])
 
-  // Salva a ogni modifica (solo se il contenuto è cambiato, vedi saveDayPlan).
   useEffect(() => {
-    if (loadedFor !== key) return
-    saveDayPlan(profile, date, { week, dayType, state, note })
-  }, [loadedFor, key, profile, date, week, dayType, state, note])
+    if (loadedFor === date) saveDayPlan(date, day)
+  }, [loadedFor, date, day])
 
-  const templates = useMemo(() => templatesForWeek(week, profile), [week, profile])
-
-  function setDayTypeAndReset(newType: DayType) {
-    setDayType(newType)
-    setState(defaultDayState(profile, week, newType, date))
-  }
-
-  function setWeek(newWeek: number) {
-    setWeekState(newWeek)
-    setState(defaultDayState(profile, newWeek, dayType, date))
-  }
-
-  function setAlimento(meal: MealType, categoria: string, alimento: string) {
-    const items = mealEquivalents(week, meal, profile)[categoria]
-    const found = items.find((i) => i.alimento === alimento)
-    if (!found) return
-    setState((prev) => ({
+  const { week, dayType, state, note } = day
+  const templates = useMemo(() => mealTargets(piano, week), [piano, week])
+  const update = (patch: Partial<typeof day>) => setDay((prev) => ({ ...prev, ...patch }))
+  const setChoice = (meal: MealType, categoria: string, choice: MealChoice) =>
+    setDay((prev) => ({
       ...prev,
-      [meal]: {
-        scelte: {
-          ...prev[meal].scelte,
-          [categoria]: {
-            alimento,
-            grammi: dayType === 'ON' ? found.grammiOn : found.grammiOff,
-          },
-        },
-      },
+      state: { ...prev.state, [meal]: { scelte: { ...prev.state[meal].scelte, [categoria]: choice } } },
     }))
-  }
 
-  function toggleBlocco(meal: MealType) {
-    setState((prev) => ({
-      ...prev,
-      [meal]: {
-        scelte: {
-          ...prev[meal].scelte,
-          carboidrati: {
-            ...prev[meal].scelte.carboidrati,
-            bloccato: !prev[meal].scelte.carboidrati?.bloccato,
-          },
-        },
-      },
-    }))
-  }
-
-  function buildEngineMeals(overrides: Partial<Record<MealType, number>>) {
-    const mealsForEngine: Parameters<typeof rebalanceDay>[0]['meals'] = []
+  function setCarboGrammi(meal: MealType, grammi: number) {
+    const engine: EngineMeal[] = []
     for (const m of ['colazione', 'pranzo', 'cena'] as MealType[]) {
-      const template = templates.find((t) => t.meal === m)
       const scelta = state[m].scelte.carboidrati
-      if (!template || !scelta) continue
-      const density = carboDensity(week, m, scelta)
-      if (density <= 0) continue
-
-      const grammiEffettivi = overrides[m] ?? scelta.grammi
-
-      const equivalent: FoodEquivalent = {
+      const density = carboDensity(piano, week, m, scelta)
+      if (!scelta || density <= 0) continue
+      const t = mealTarget(piano, week, m)
+      engine.push({
         meal: m,
-        categoria: 'carboidrati',
-        alimento: scelta.alimento,
-        grammiOn: 0,
-        grammiOff: 0,
-        choPer100g: density,
-      }
-
-      mealsForEngine.push({
-        meal: m,
-        template,
-        equivalent,
-        choice: {
-          profile,
-          date,
-          meal: m,
-          categoria: 'carboidrati',
-          alimento: scelta.alimento,
-          grammi: grammiEffettivi,
-          bloccato: scelta.bloccato,
-        },
-        choFissiG: scelta.choFissiG,
+        target: dayType === 'ON' ? t.targetChoOnG : t.targetChoOffG,
+        grammi: m === meal ? grammi : scelta.grammi,
+        density,
+        fissi: scelta.choFissiG,
+        bloccato: scelta.bloccato,
       })
     }
-    return mealsForEngine
-  }
-
-  function applyRebalanceResults(results: ReturnType<typeof rebalanceDay>) {
-    setState((prev) => {
-      const next = { ...prev }
-      for (const r of results) {
-        next[r.meal] = {
-          scelte: {
-            ...next[r.meal].scelte,
-            carboidrati: {
-              ...next[r.meal].scelte.carboidrati,
-              grammi: r.grammiAggiornati,
-            },
-          },
-        }
+    const updated: Partial<Record<MealType, number>> = { ...rebalanceDay(engine, meal), [meal]: grammi }
+    setDay((prev) => {
+      const next = { ...prev.state }
+      for (const [m, g] of Object.entries(updated) as [MealType, number][]) {
+        next[m] = { scelte: { ...next[m].scelte, carboidrati: { ...next[m].scelte.carboidrati, grammi: g } } }
       }
-      return next
+      return { ...prev, state: next }
     })
-  }
-
-  /**
-   * Modifica manualmente la grammatura del carboidrato di un pasto e
-   * ribilancia gli altri pasti (non bloccati) della giornata per
-   * mantenere il totale di CHO giornaliero.
-   */
-  function setCarboGrammi(meal: MealType, grammi: number) {
-    const mealsForEngine = buildEngineMeals({ [meal]: grammi })
-    const results = rebalanceDay({ dayType, meals: mealsForEngine, editedMeal: meal })
-    applyRebalanceResults(results)
-  }
-
-  /**
-   * Assegna una ricetta della libreria al pasto: l'ingrediente
-   * "scalabile" della ricetta (es. la pasta) viene impostato alla
-   * grammatura che centra il target di CHO del pasto, poi gli altri
-   * pasti della giornata si ribilanciano come con una modifica manuale.
-   */
-  function assignRecipe(meal: MealType, recipeId: string) {
-    const recipe = recipes.find((r) => r.id === recipeId)
-    if (!recipe) return
-    const choice = recipeChoice(profile, week, meal, dayType, recipe)
-    if (!choice) return
-    setState((prev) => ({
-      ...prev,
-      [meal]: { scelte: { ...prev[meal].scelte, carboidrati: choice } },
-    }))
-  }
-
-  /** Rimuove la ricetta: il pasto torna alla scelta da tabella che la
-   * rotazione propone per quella data. */
-  function clearRecipe(meal: MealType) {
-    const fallback = defaultMealState(profile, week, meal, dayType, date, 0, new Set())
-    setState((prev) => ({
-      ...prev,
-      [meal]: { scelte: { ...prev[meal].scelte, ...fallback.scelte } },
-    }))
   }
 
   return {
     week,
-    setWeek,
     dayType,
-    setDayType: setDayTypeAndReset,
     state,
-    templates,
-    setAlimento,
-    setCarboGrammi,
-    toggleBlocco,
-    assignRecipe,
-    clearRecipe,
     note,
-    setNote,
+    templates,
+    setWeek: (w: number) => update({ week: w, state: defaultDayState(piano, w, dayType, date) }),
+    setDayType: (t: DayType) => update({ dayType: t, state: defaultDayState(piano, week, t, date) }),
+    setNote: (n: string) => update({ note: n }),
+    setCarboGrammi,
+    setAlimento(meal: MealType, categoria: string, alimento: string) {
+      const found = equivalents(piano, week, meal)[categoria]?.find((i) => i.alimento === alimento)
+      if (found) setChoice(meal, categoria, { alimento, grammi: dayType === 'ON' ? found.grammiOn : found.grammiOff })
+    },
+    toggleBlocco(meal: MealType) {
+      const c = state[meal].scelte.carboidrati
+      if (c) setChoice(meal, 'carboidrati', { ...c, bloccato: !c.bloccato })
+    },
+    assignRecipe(meal: MealType, recipeId: string) {
+      const recipe = recipes.find((r) => r.id === recipeId)
+      const choice = recipe && recipeChoice(piano, week, meal, dayType, recipe)
+      if (choice) setChoice(meal, 'carboidrati', choice)
+    },
+    /** Toglie la ricetta: il pasto torna alla scelta da tabella proposta per la data. */
+    clearRecipe(meal: MealType) {
+      const fallback = tableMealState(piano, week, meal, dayType, date, 0, new Set())
+      setDay((prev) => ({
+        ...prev,
+        state: { ...prev.state, [meal]: { scelte: { ...prev.state[meal].scelte, ...fallback.scelte } } },
+      }))
+    },
   }
 }

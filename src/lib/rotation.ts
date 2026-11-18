@@ -45,7 +45,7 @@ export function rotationIndexAt(day: number, key: string, n: number, seed = 0): 
 
 /** Nome normalizzato per riconoscere lo stesso alimento in tabelle diverse
  * (es. "Patate dolci americane" a pranzo e "Patate dolci" a cena). */
-export function sameFoodKey(alimento: string): string {
+function sameFoodKey(alimento: string): string {
   return alimento.toLowerCase().replace(/\s+americane\b/, '').replace(/\s*\(.*?\)/g, '').trim()
 }
 

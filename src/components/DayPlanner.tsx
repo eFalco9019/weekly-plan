@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { ProfileId, MealType } from '../types'
+import type { MealType } from '../types'
 import { useDayPlan } from '../hooks/useDayPlan'
-import { profiles } from '../data/profiles'
+import type { Piano } from '../data/piano'
 import { addDays } from '../lib/dateUtils'
 import { dayMonthName, weekdayName } from '../lib/format'
 import { MealSection } from './MealSection'
@@ -9,7 +9,8 @@ import { DayTotals } from './DayTotals'
 import { DayTypeSwitch } from './DayTypeSwitch'
 
 interface Props {
-  profile: ProfileId
+  piano: Piano
+  nome: string
   date: string
   onDateChange: (date: string) => void
   onBackToWeek: () => void
@@ -17,9 +18,8 @@ interface Props {
 
 const meals: MealType[] = ['colazione', 'pranzo', 'spuntino', 'cena']
 
-export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props) {
-  const plan = useDayPlan(profile, date)
-  const profileData = profiles.find((p) => p.id === profile)
+export function DayPlanner({ piano, nome, date, onDateChange, onBackToWeek }: Props) {
+  const plan = useDayPlan(piano, date)
   const [noteOpen, setNoteOpen] = useState(false)
   const showNoteInput = noteOpen || plan.note.length > 0
 
@@ -27,7 +27,7 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
     <div className="day-planner">
       <header className="day-planner__header">
         <button type="button" className="link-button day-planner__back" onClick={onBackToWeek}>
-          ‹ Settimana di {profileData?.nome}
+          ‹ {nome ? `Settimana di ${nome}` : 'Settimana'}
         </button>
 
         <div className="day-planner__title">
@@ -57,7 +57,7 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
           <label className="day-planner__week">
             Settimana del ciclo
             <select value={plan.week} onChange={(e) => plan.setWeek(Number(e.target.value))}>
-              {[1, 2, 3, 4].map((w) => (
+              {Array.from({ length: piano.settimane }, (_, i) => i + 1).map((w) => (
                 <option key={w} value={w}>
                   {w}
                 </option>
@@ -69,14 +69,7 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
 
       <div className="day-planner__layout">
         <aside className="day-planner__summary">
-          <DayTotals
-            state={plan.state}
-            templates={plan.templates}
-            dayType={plan.dayType}
-            week={plan.week}
-            proteinG={profileData?.proteineGFisse}
-            fatG={profileData?.grassiGFissi}
-          />
+          <DayTotals piano={piano} state={plan.state} dayType={plan.dayType} week={plan.week} />
 
           <div className="day-planner__note">
             {showNoteInput ? (
@@ -107,7 +100,7 @@ export function DayPlanner({ profile, date, onDateChange, onBackToWeek }: Props)
           {meals.map((meal) => (
             <MealSection
               key={meal}
-              profile={profile}
+              piano={piano}
               meal={meal}
               mealState={plan.state[meal]}
               dayType={plan.dayType}

@@ -1,16 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { DayType, ProfileId } from '../types'
+import type { DayType } from '../types'
 import { weekDates, toIso } from '../lib/dateUtils'
-import {
-  loadDayPlan,
-  defaultDayState,
-  calcDayChoTotals,
-  setDayTypeForDate,
-  setNoteForDate,
-  regenerateMenu,
-} from '../hooks/useDayPlan'
-import { templatesForWeek } from '../data/weekRegistry'
-import { profiles } from '../data/profiles'
+import { dayOrDefault, calcDayChoTotals, setDayTypeForDate, setNoteForDate, regenerateMenu } from '../hooks/useDayPlan'
+import type { Piano } from '../data/piano'
 import { describeMeal } from '../lib/mealLabel'
 import { onRemotePlanChange } from '../lib/planStore'
 import { fmtInt, rangeName, weekdayName } from '../lib/format'
@@ -23,26 +15,18 @@ import type { MealType } from '../types'
 const mainMeals: MealType[] = ['colazione', 'pranzo', 'cena']
 
 interface Props {
-  profile: ProfileId
+  piano: Piano
+  nome: string
   anchorDate: string
   onNavigateWeek: (deltaWeeks: number) => void
   onSelectDay: (date: string) => void
-  onChangeProfile: (id: ProfileId) => void
+  onOpenPlan: () => void
   onOpenShoppingList: () => void
 }
 
-export function WeekView({
-  profile,
-  anchorDate,
-  onNavigateWeek,
-  onSelectDay,
-  onChangeProfile,
-  onOpenShoppingList,
-}: Props) {
+export function WeekView({ piano, nome, anchorDate, onNavigateWeek, onSelectDay, onOpenPlan, onOpenShoppingList }: Props) {
   const dates = weekDates(anchorDate)
   const todayIso = toIso(new Date())
-  const profileName = profiles.find((p) => p.id === profile)?.nome ?? ''
-  const otherProfile = profiles.find((p) => p.id !== profile)
   // Forza il ricalcolo dopo un cambio ON/OFF inline (i dati vivono in
   // localStorage, non in uno state React, quindi serve un re-render esplicito).
   const [, setTick] = useState(0)
@@ -53,29 +37,25 @@ export function WeekView({
   useEffect(() => onRemotePlanChange(() => setTick((t) => t + 1)), [])
 
   function handleToggleDayType(date: string, dayType: DayType) {
-    setDayTypeForDate(profile, date, dayType)
+    setDayTypeForDate(piano, date, dayType)
     setTick((t) => t + 1)
   }
 
   function handleShuffleWeek() {
-    regenerateMenu(profile, dates, 1 + Math.floor(Math.random() * 10_000))
+    regenerateMenu(piano, dates, 1 + Math.floor(Math.random() * 10_000))
     setShuffledWeek(dates[0])
     setTick((t) => t + 1)
   }
 
   function handleSaveNote(date: string, note: string) {
-    setNoteForDate(profile, date, note.trim())
+    setNoteForDate(piano, date, note.trim())
     setEditingNote(null)
     setTick((t) => t + 1)
   }
 
   const days = dates.map((date) => {
-    const saved = loadDayPlan(profile, date)
-    const week = saved?.week ?? 1
-    const dayType: DayType = saved?.dayType ?? 'ON'
-    const state = saved?.state ?? defaultDayState(profile, week, dayType, date)
-    const { actual, target } = calcDayChoTotals(week, dayType, state, templatesForWeek(week, profile))
-    return { date, week, dayType, state, actual, target, note: saved?.note ?? '' }
+    const day = dayOrDefault(piano, date)
+    return { date, ...day, ...calcDayChoTotals(piano, day.week, day.dayType, day.state) }
   })
   const cycleWeeks = [...new Set(days.map((d) => d.week))]
   const onDays = days.filter((d) => d.dayType === 'ON').length
@@ -84,18 +64,16 @@ export function WeekView({
     <div className="week-view">
       <header className="week-view__header">
         <div className="week-view__heading">
-          <h1>La settimana di {profileName}</h1>
+          <h1>{nome ? `La settimana di ${nome}` : 'La tua settimana'}</h1>
           <p className="week-view__summary">
             Settimana {cycleWeeks.join(' e ')} del ciclo, con {onDays} {onDays === 1 ? 'giorno' : 'giorni'} ON e{' '}
             {7 - onDays} OFF.
           </p>
           <div className="week-view__meta">
             <SyncBadge />
-            {otherProfile && (
-              <button type="button" className="link-button" onClick={() => onChangeProfile(otherProfile.id)}>
-                Passa a {otherProfile.nome}
-              </button>
-            )}
+            <button type="button" className="link-button" onClick={onOpenPlan}>
+              Il mio piano
+            </button>
           </div>
         </div>
         <div className="week-view__toolbar">

@@ -1,40 +1,17 @@
-// Modello dati condiviso della plancia nutrizionale.
-// I giorni del piano si sincronizzano con la tabella day_plans (supabase/migrations).
-
-export type ProfileId = 'ezio' | 'arianna'
-
-export interface Profile {
-  id: ProfileId
-  nome: string
-  pesoKg: number
-  altezzaCm: number
-  proteineGFisse: number
-  grassiGFissi: number
-}
+// Modello dati della plancia nutrizionale. I giorni si sincronizzano con la
+// tabella days (supabase/migrations), il piano dell'utente con profiles.
 
 export type DayType = 'ON' | 'OFF'
 
 export type MealType = 'colazione' | 'pranzo' | 'spuntino' | 'cena'
 
-export type FoodCategory = 'carboidrati' | 'proteine' | 'grassi' | 'frutta' | 'verdura'
-
-/**
- * Una voce di una tabella di equivalenza: lo stesso pasto può essere
- * composto scegliendo UNA fonte per categoria. Ogni fonte ha una
- * grammatura diversa nei giorni ON rispetto ai giorni OFF, perché il
- * target di CHO cambia.
- */
+/** Un alimento di una tabella di equivalenza, con i grammi del giorno ON e OFF. */
 export interface FoodEquivalent {
-  meal: MealType
-  categoria: FoodCategory
   alimento: string
   grammiOn: number
   grammiOff: number
-  /** g di CHO per 100 g di alimento. Necessario solo per la categoria
-   * 'carboidrati' (è quella su cui agisce il motore di compensazione);
-   * per le altre categorie può essere 0/omesso. */
+  /** g di CHO per 100 g: solo per la categoria 'carboidrati' (usata dalla compensazione). */
   choPer100g?: number
-  note?: string
 }
 
 /** Target macro di un pasto, per una data settimana del piano. */
@@ -47,38 +24,6 @@ export interface MealTemplate {
    * non regolate dal motore): oggi lo spuntino. Contano nel totale del giorno. */
   choFissoG?: number
   targetProteinG?: number
-  targetFatG?: number
-}
-
-/** Progressione settimanale dei carboidrati totali giornalieri (per profilo). */
-export interface ChoProgressionWeek {
-  profile: ProfileId
-  week: number
-  onChoG: number
-  offChoG: number
-  onKcal?: number
-  offKcal?: number
-}
-
-/** Stato ON/OFF di una data specifica per un profilo (non legato al giorno della settimana). */
-export interface DayLog {
-  profile: ProfileId
-  date: string // YYYY-MM-DD
-  dayType: DayType
-  week: number
-}
-
-/** La scelta effettiva (alimento + grammatura) di un profilo per un pasto in una data. */
-export interface DayMealChoice {
-  profile: ProfileId
-  date: string
-  meal: MealType
-  categoria: FoodCategory
-  alimento: string
-  grammi: number
-  /** Se true, il motore di compensazione non tocca questo pasto quando si
-   * ribilanciano gli altri pasti della giornata. */
-  bloccato?: boolean
 }
 
 // ---------------------------------------------------------------------
@@ -112,15 +57,4 @@ export interface Recipe {
    * l'utente fornisca anche il testo/screenshot della ricetta. */
   fonteUrl?: string
   fonteNote?: string
-}
-
-/** Assegnazione di una ricetta della libreria a un pasto di una data
- * specifica, con le porzioni effettive (da cui si derivano le
- * grammature scalate). */
-export interface DayRecipeAssignment {
-  profile: ProfileId
-  date: string
-  meal: MealType
-  recipeId: string
-  porzioni: number
 }

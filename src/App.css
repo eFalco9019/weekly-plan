@@ -208,70 +208,243 @@ button {
 }
 
 /* ------------------------------------------------------------------ */
-/* Selettore profilo                                                   */
+/* Accesso e primo accesso                                             */
 /* ------------------------------------------------------------------ */
 
-.profile-selector {
+.loading {
+  padding: 40px 16px;
+  color: var(--ink-soft);
+}
+
+.auth {
   max-width: 440px;
   margin: 0 auto;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 28px;
+  gap: 14px;
+  padding: 32px 20px;
 }
 
-.profile-selector h1 {
-  font-size: 2.3rem;
+.auth h1 {
+  font-size: 2.2rem;
   font-weight: 500;
   line-height: 1.15;
-  margin: 0 0 16px;
+  margin: 0;
 }
 
-.profile-selector p {
+.auth > p {
   color: var(--ink-soft);
-  font-size: 0.98rem;
-  margin: 0 0 28px;
 }
 
-.profile-selector__options {
+.auth__form {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 14px;
+  margin: 8px 0;
 }
 
-.profile-selector__options button {
-  flex: 1;
+.auth__form label,
+.plan-settings__field {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.auth__form input:not([type='radio'], [type='checkbox']),
+.plan-settings input {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 1rem;
-  font-weight: 600;
-  padding: 14px 18px;
+}
+
+.auth__form .button {
+  align-self: flex-start;
+}
+
+.auth__choices {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth__choices legend {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.auth__form .auth__choice {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--ink);
+  font-size: 0.95rem;
   cursor: pointer;
+}
+
+.auth__choice input {
+  margin-top: 3px;
+  accent-color: var(--energia);
+}
+
+.auth__choice small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.auth__message {
+  font-size: 0.88rem;
+  color: var(--ink);
+  background: var(--surface);
+  border-left: 3px solid var(--recupero);
+  padding: 8px 12px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Il mio piano                                                        */
+/* ------------------------------------------------------------------ */
+
+.plan-settings {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+.plan-settings h1 {
+  font-size: 1.9rem;
+  font-weight: 500;
+  margin: 10px 0 6px;
+}
+
+.plan-settings__intro,
+.plan-settings__hint {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  max-width: 60ch;
+}
+
+.plan-settings__section {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-top: 14px;
   box-shadow: var(--shadow-card);
-  transition: border-color 0.15s;
 }
 
-.profile-selector__options button:hover {
-  border-color: var(--ink-soft);
+.plan-settings__section h2 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0 0 10px;
 }
 
-.profile-selector__avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--energia);
-  color: #fff;
+.plan-settings__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.plan-settings__grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-settings__grid th,
+.plan-settings__grid td {
+  padding: 6px 4px;
+  text-align: right;
+  border-top: 1px solid var(--line);
+}
+
+.plan-settings__grid thead th {
+  border-top: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.plan-settings__grid tbody th {
+  text-align: left;
+  font-weight: 500;
+}
+
+.plan-settings__grid input {
+  width: 100%;
+  max-width: 96px;
+  padding: 7px 8px;
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.plan-settings__fixed {
+  color: var(--ink-soft);
+}
+
+.plan-settings__total th,
+.plan-settings__total td {
+  font-weight: 600;
+}
+
+.plan-settings__total small {
+  display: block;
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.plan-settings__errors {
+  margin: 14px 0 0;
+  padding: 10px 12px 10px 28px;
+  background: var(--surface);
+  border-left: 3px solid #c0563f;
+  font-size: 0.88rem;
+}
+
+.plan-settings__message {
+  margin-top: 14px;
+  font-size: 0.88rem;
+}
+
+.plan-settings__actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.plan-settings__account {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  flex-shrink: 0;
+  gap: 4px 16px;
+  margin-top: 32px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
 }
 
 /* ------------------------------------------------------------------ */

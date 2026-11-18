@@ -6,11 +6,8 @@ const url = env?.VITE_SUPABASE_URL as string | undefined
 const anonKey = env?.VITE_SUPABASE_ANON_KEY as string | undefined
 
 /**
- * Finché VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY non sono impostate
- * (secrets GitHub per il deploy, .env.local in sviluppo), l'app salva
- * solo sul dispositivo (localStorage); con le chiavi, src/lib/sync.ts
- * sincronizza i giorni con la tabella day_plans.
+ * Con VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (.env.production, chiave
+ * pubblica) l'app usa login e database; senza (sviluppo, test) gira in
+ * locale su questo dispositivo.
  */
-export const supabaseEnabled = Boolean(url && anonKey)
-
-export const supabase = supabaseEnabled ? createClient(url as string, anonKey as string) : null
+export const supabase = url && anonKey ? createClient(url, anonKey) : null

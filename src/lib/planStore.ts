@@ -1,87 +1,77 @@
-import type { DayType, ProfileId } from '../types'
+import type { DayType } from '../types'
 import type { DayState } from '../hooks/useDayPlan'
 
 /**
- * Copia locale dei giorni del piano (localStorage del browser). È la
- * copia su cui l'app lavora sempre, anche offline; src/lib/sync.ts la
- * tiene allineata con Supabase quando il progetto è collegato.
+ * Copia locale dei giorni dell'utente collegato (localStorage). L'app lavora
+ * sempre su questa copia, anche offline; src/lib/sync.ts la allinea con il
+ * database.
  */
 export interface StoredDayPlan {
   week: number
   dayType: DayType
   state: DayState
-  /** Nota libera del giorno (es. tipo di allenamento fatto). */
+  /** Nota libera del giorno (es. allenamento fatto). */
   note?: string
-  /** Ora dell'ultima modifica (ISO): decide quale versione vince tra dispositivi. */
+  /** Ora dell'ultima modifica (ISO): tra due dispositivi vince la più recente. */
   updatedAt?: string
 }
 
-const PREFIX = 'weekly-plan:dayplan:'
+let user = 'locale'
+const prefix = () => `weekly-plan:${user}:day:`
 
-export function storageKey(profile: ProfileId, date: string) {
-  return `${PREFIX}${profile}:${date}`
+/** Imposta l'utente di cui leggere e scrivere i giorni. */
+export function setStoreUser(id: string) {
+  user = id
 }
 
-/** "profilo|data", la chiave usata dalla coda di sincronizzazione. */
-export function planId(profile: ProfileId, date: string) {
-  return `${profile}|${date}`
-}
-
-export function parsePlanId(id: string): { profile: ProfileId; date: string } {
-  const [profile, date] = id.split('|')
-  return { profile: profile as ProfileId, date }
-}
-
-export function readPlan(profile: ProfileId, date: string): StoredDayPlan | null {
+export function readPlan(date: string): StoredDayPlan | null {
   try {
-    const raw = localStorage.getItem(storageKey(profile, date))
+    const raw = localStorage.getItem(prefix() + date)
     return raw ? (JSON.parse(raw) as StoredDayPlan) : null
   } catch {
     return null
   }
 }
 
-/** Scrive senza avviare la sincronizzazione (usato per applicare le modifiche arrivate dal database). */
-export function writePlanRaw(profile: ProfileId, date: string, plan: StoredDayPlan) {
+/** Scrive senza avviare la sincronizzazione (usato anche per le modifiche arrivate dal database). */
+export function writePlanRaw(date: string, plan: StoredDayPlan) {
   try {
-    localStorage.setItem(storageKey(profile, date), JSON.stringify(plan))
+    localStorage.setItem(prefix() + date, JSON.stringify(plan))
   } catch {
     // Storage pieno o bloccato: l'app continua con lo stato in memoria.
   }
 }
 
-/** Il contenuto di un giorno senza l'ora di modifica: serve a capire se è cambiato davvero. */
+/** Il contenuto di un giorno senza l'ora di modifica: dice se è cambiato davvero. */
 export function contentOf(plan: StoredDayPlan): string {
   return JSON.stringify({ week: plan.week, dayType: plan.dayType, state: plan.state, note: plan.note ?? '' })
 }
 
-/** Tutti i giorni salvati su questo dispositivo, come "profilo|data". */
-export function localPlanIds(): string[] {
-  const ids: string[] = []
+/** Date dei giorni salvati su questo dispositivo per l'utente collegato. */
+export function localDates(): string[] {
+  const out: string[] = []
   try {
+    const p = prefix()
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (!key?.startsWith(PREFIX)) continue
-      const [profile, date] = key.slice(PREFIX.length).split(':')
-      if (profile && date) ids.push(planId(profile as ProfileId, date))
+      if (key?.startsWith(p)) out.push(key.slice(p.length))
     }
   } catch {
     // Storage non disponibile.
   }
-  return ids
+  return out
 }
 
-type Listener = (profile: ProfileId, date: string) => void
-const listeners = new Set<Listener>()
+const listeners = new Set<(date: string) => void>()
 
-/** Notifica quando un giorno cambia per una modifica arrivata da un altro dispositivo. */
-export function onRemotePlanChange(listener: Listener): () => void {
+/** Notifica i giorni cambiati da un altro dispositivo. */
+export function onRemotePlanChange(listener: (date: string) => void): () => void {
   listeners.add(listener)
   return () => {
     listeners.delete(listener)
   }
 }
 
-export function emitRemotePlanChange(profile: ProfileId, date: string) {
-  for (const l of listeners) l(profile, date)
+export function emitRemotePlanChange(date: string) {
+  for (const l of listeners) l(date)
 }
